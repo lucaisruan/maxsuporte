@@ -14,9 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Plus, Clock, FileText, Download } from "lucide-react";
-import { jsPDF } from "jspdf";
-import logo from "@/assets/logo.jpeg";
+import { Loader2, ArrowLeft, Plus, Clock, FileText, Copy } from "lucide-react";
 
 interface ChecklistItem {
   id: string;
@@ -260,205 +258,58 @@ export default function ImplantacaoDetalhe() {
     setEpisodeObservations("");
   };
 
-  const generatePDF = async () => {
+  const generateReport = () => {
     if (!implementation) return;
 
     const completedItems = checklistItems.filter((i) => i.is_completed);
     const pendingItems = checklistItems.filter((i) => !i.is_completed);
 
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let y = 20;
+    const report = `
+═══════════════════════════════════════════════
+           RELATÓRIO DE IMPLANTAÇÃO
+           MAX IMPLANTAÇÕES
+═══════════════════════════════════════════════
 
-    // Load logo as base64
-    const loadImage = (src: string): Promise<string> => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL("image/jpeg"));
-        };
-        img.src = src;
-      });
-    };
+📋 DADOS DO CLIENTE
+───────────────────────────────────────────────
+Cliente: ${implementation.client?.name || "N/A"}
+CNPJ: ${implementation.client?.cnpj || "N/A"}
 
-    try {
-      const logoBase64 = await loadImage(logo);
+📅 PERÍODO
+───────────────────────────────────────────────
+Início: ${new Date(implementation.start_date).toLocaleDateString("pt-BR")}
+Término: ${implementation.end_date ? new Date(implementation.end_date).toLocaleDateString("pt-BR") : "Em andamento"}
+Status: ${implementation.status.replace("_", " ").toUpperCase()}
 
-      // Header with logo
-      doc.setFillColor(220, 38, 38); // Red color
-      doc.rect(0, 0, pageWidth, 35, "F");
-      
-      // Add logo
-      doc.addImage(logoBase64, "JPEG", 15, 5, 25, 25);
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.text("RELATÓRIO DE IMPLANTAÇÃO", pageWidth / 2 + 10, 15, { align: "center" });
-      doc.setFontSize(12);
-      doc.text("MAX IMPLANTAÇÕES", pageWidth / 2 + 10, 25, { align: "center" });
+⏱️ TEMPO TOTAL
+───────────────────────────────────────────────
+${Math.floor(implementation.total_time_minutes / 60)}h ${implementation.total_time_minutes % 60}min
 
-      y = 50;
-      doc.setTextColor(0, 0, 0);
+✅ ETAPAS CONCLUÍDAS (${completedItems.length}/${checklistItems.length})
+───────────────────────────────────────────────
+${completedItems.map((item) => `• ${item.title} - ${Math.floor(item.time_spent_minutes / 60)}h ${item.time_spent_minutes % 60}min${item.observations ? `\n  Obs: ${item.observations}` : ""}`).join("\n")}
 
-    // Client Data Section
-    doc.setFillColor(245, 245, 245);
-    doc.rect(10, y - 5, pageWidth - 20, 25, "F");
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("DADOS DO CLIENTE", 15, y + 3);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Cliente: ${implementation.client?.name || "N/A"}`, 15, y + 12);
-    doc.text(`CNPJ: ${implementation.client?.cnpj || "N/A"}`, 15, y + 18);
-    y += 35;
+❌ ETAPAS PENDENTES (${pendingItems.length})
+───────────────────────────────────────────────
+${pendingItems.length > 0 ? pendingItems.map((item) => `• ${item.title}`).join("\n") : "Todas as etapas foram concluídas!"}
 
-    // Period Section
-    doc.setFillColor(245, 245, 245);
-    doc.rect(10, y - 5, pageWidth - 20, 25, "F");
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("PERÍODO", 15, y + 3);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Início: ${new Date(implementation.start_date).toLocaleDateString("pt-BR")}`, 15, y + 12);
-    doc.text(`Término: ${implementation.end_date ? new Date(implementation.end_date).toLocaleDateString("pt-BR") : "Em andamento"}`, 80, y + 12);
-    doc.text(`Status: ${implementation.status.replace("_", " ").toUpperCase()}`, 15, y + 18);
-    y += 35;
+📝 EPISÓDIOS REGISTRADOS (${episodes.length})
+───────────────────────────────────────────────
+${episodes.map((ep) => `• [${ep.episode_date}] ${ep.episode_type.toUpperCase()} - ${ep.module}
+  Horário: ${ep.start_time} às ${ep.end_time} (${Math.floor(ep.time_spent_minutes / 60)}h ${ep.time_spent_minutes % 60}min)
+  ${ep.trained_clients ? `Treinados: ${ep.trained_clients}` : ""}
+  ${ep.observations ? `Obs: ${ep.observations}` : ""}`).join("\n\n")}
 
-    // Total Time Section
-    doc.setFillColor(220, 38, 38);
-    doc.rect(10, y - 5, pageWidth - 20, 15, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(`TEMPO TOTAL: ${Math.floor(implementation.total_time_minutes / 60)}h ${implementation.total_time_minutes % 60}min`, pageWidth / 2, y + 5, { align: "center" });
-    doc.setTextColor(0, 0, 0);
-    y += 25;
+═══════════════════════════════════════════════
+Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
+═══════════════════════════════════════════════
+    `.trim();
 
-    // Completed Steps
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(`ETAPAS CONCLUÍDAS (${completedItems.length}/${checklistItems.length})`, 15, y);
-    y += 8;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    
-    completedItems.forEach((item) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.setFillColor(220, 252, 231);
-      doc.rect(10, y - 3, pageWidth - 20, 8, "F");
-      doc.text(`✓ ${item.title} - ${Math.floor(item.time_spent_minutes / 60)}h ${item.time_spent_minutes % 60}min`, 15, y + 2);
-      y += 10;
-      if (item.observations) {
-        doc.setTextColor(100, 100, 100);
-        doc.text(`   Obs: ${item.observations}`, 15, y);
-        doc.setTextColor(0, 0, 0);
-        y += 6;
-      }
-    });
-
-    y += 5;
-
-    // Pending Steps
-    if (pendingItems.length > 0) {
-      if (y > 250) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(`ETAPAS PENDENTES (${pendingItems.length})`, 15, y);
-      y += 8;
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      
-      pendingItems.forEach((item) => {
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.setFillColor(254, 226, 226);
-        doc.rect(10, y - 3, pageWidth - 20, 8, "F");
-        doc.text(`○ ${item.title}`, 15, y + 2);
-        y += 10;
-      });
-    }
-
-    y += 5;
-
-    // Episodes
-    if (episodes.length > 0) {
-      if (y > 230) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(`EPISÓDIOS REGISTRADOS (${episodes.length})`, 15, y);
-      y += 8;
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      
-      episodes.forEach((ep) => {
-        if (y > 255) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.setFillColor(240, 240, 240);
-        doc.rect(10, y - 3, pageWidth - 20, 18, "F");
-        doc.setFont("helvetica", "bold");
-        doc.text(`${getEpisodeTypeLabel(ep.episode_type)} - ${getModuleLabel(ep.module)}`, 15, y + 2);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Data: ${new Date(ep.episode_date).toLocaleDateString("pt-BR")} | ${ep.start_time} às ${ep.end_time} (${Math.floor(ep.time_spent_minutes / 60)}h ${ep.time_spent_minutes % 60}min)`, 15, y + 8);
-        if (ep.trained_clients) {
-          doc.text(`Treinados: ${ep.trained_clients}`, 15, y + 14);
-        }
-        y += 22;
-        if (ep.observations) {
-          doc.setTextColor(100, 100, 100);
-          doc.text(`Obs: ${ep.observations.substring(0, 80)}${ep.observations.length > 80 ? "..." : ""}`, 15, y - 2);
-          doc.setTextColor(0, 0, 0);
-          y += 6;
-        }
-      });
-    }
-
-    // Footer
-    const totalPages = doc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Relatório gerado em: ${new Date().toLocaleString("pt-BR")}`, 15, 285);
-      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 30, 285);
-    }
-
-    // Save PDF
-    const clientName = implementation.client?.name?.replace(/[^a-zA-Z0-9]/g, "_") || "implantacao";
-    doc.save(`relatorio_${clientName}_${new Date().toISOString().split("T")[0]}.pdf`);
-
+    navigator.clipboard.writeText(report);
     toast({
-      title: "PDF gerado!",
-      description: "O relatório foi baixado com sucesso.",
+      title: "Relatório copiado!",
+      description: "O relatório foi copiado para a área de transferência.",
     });
-    } catch (error) {
-      console.error("Erro ao gerar PDF:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao gerar PDF",
-        description: "Não foi possível gerar o relatório.",
-      });
-    }
   };
 
   const getProgress = () => {
@@ -540,9 +391,9 @@ export default function ImplantacaoDetalhe() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={generatePDF}>
-              <Download className="mr-2 h-4 w-4" />
-              Baixar PDF
+            <Button variant="outline" onClick={generateReport}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copiar Relatório
             </Button>
           </div>
         </div>
