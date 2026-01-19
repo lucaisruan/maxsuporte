@@ -14,16 +14,288 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      checklist_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          implementation_id: string
+          is_completed: boolean
+          observations: string | null
+          order_index: number
+          parent_id: string | null
+          time_spent_minutes: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          implementation_id: string
+          is_completed?: boolean
+          observations?: string | null
+          order_index: number
+          parent_id?: string | null
+          time_spent_minutes?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          implementation_id?: string
+          is_completed?: boolean
+          observations?: string | null
+          order_index?: number
+          parent_id?: string | null
+          time_spent_minutes?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_implementation_id_fkey"
+            columns: ["implementation_id"]
+            isOneToOne: false
+            referencedRelation: "implementations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          observations: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          observations?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          observations?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      episodes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_time: string
+          episode_date: string
+          episode_type: Database["public"]["Enums"]["episode_type"]
+          id: string
+          implementation_id: string
+          module: Database["public"]["Enums"]["module_type"]
+          observations: string | null
+          start_time: string
+          time_spent_minutes: number
+          trained_clients: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_time: string
+          episode_date: string
+          episode_type: Database["public"]["Enums"]["episode_type"]
+          id?: string
+          implementation_id: string
+          module: Database["public"]["Enums"]["module_type"]
+          observations?: string | null
+          start_time: string
+          time_spent_minutes: number
+          trained_clients?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string
+          episode_date?: string
+          episode_type?: Database["public"]["Enums"]["episode_type"]
+          id?: string
+          implementation_id?: string
+          module?: Database["public"]["Enums"]["module_type"]
+          observations?: string | null
+          start_time?: string
+          time_spent_minutes?: number
+          trained_clients?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_implementation_id_fkey"
+            columns: ["implementation_id"]
+            isOneToOne: false
+            referencedRelation: "implementations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      implementations: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          id: string
+          implementer_id: string | null
+          observations: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["implementation_status"]
+          total_time_minutes: number | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          implementer_id?: string | null
+          observations?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["implementation_status"]
+          total_time_minutes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          implementer_id?: string | null
+          observations?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["implementation_status"]
+          total_time_minutes?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "implementations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_default_checklist: {
+        Args: { impl_id: string }
+        Returns: undefined
+      }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "implantador"
+      episode_type:
+        | "treinamento"
+        | "parametrizacao"
+        | "ajuste_fiscal"
+        | "migracao"
+      implementation_status:
+        | "em_andamento"
+        | "pausada"
+        | "concluida"
+        | "cancelada"
+      module_type:
+        | "vendas"
+        | "financeiro"
+        | "cadastros"
+        | "relatorios"
+        | "caixa"
+        | "fiscal"
+        | "geral"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +422,29 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "implantador"],
+      episode_type: [
+        "treinamento",
+        "parametrizacao",
+        "ajuste_fiscal",
+        "migracao",
+      ],
+      implementation_status: [
+        "em_andamento",
+        "pausada",
+        "concluida",
+        "cancelada",
+      ],
+      module_type: [
+        "vendas",
+        "financeiro",
+        "cadastros",
+        "relatorios",
+        "caixa",
+        "fiscal",
+        "geral",
+      ],
+    },
   },
 } as const
