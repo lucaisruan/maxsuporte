@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import logo from "@/assets/logo.jpeg";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -39,9 +40,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             </Button>
           )}
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">M</span>
-            </div>
+            <img src={logo} alt="MAX IMPLANTAÇÕES" className="h-8 w-8 object-contain" />
             <span className="text-lg font-bold text-foreground">MAX IMPLANTAÇÕES</span>
           </div>
         </div>
