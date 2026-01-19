@@ -212,9 +212,9 @@ export default function ImplantacaoDetalhe() {
       const { data, error } = await supabase
         .from("episodes")
         .insert({
-          implementation_id: id,
-          episode_type: episodeType,
-          module: episodeModule,
+          implementation_id: id!,
+          episode_type: episodeType as "treinamento" | "parametrizacao" | "ajuste_fiscal" | "migracao",
+          module: episodeModule as "vendas" | "financeiro" | "cadastros" | "relatorios" | "caixa" | "fiscal" | "geral",
           trained_clients: trainedClients || null,
           episode_date: episodeDate,
           start_time: startTime,
