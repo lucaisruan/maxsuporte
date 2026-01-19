@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Plus, Clock, FileText, Download } from "lucide-react";
 import { jsPDF } from "jspdf";
+import logo from "@/assets/logo.jpeg";
 
 interface ChecklistItem {
   id: string;
@@ -259,7 +260,7 @@ export default function ImplantacaoDetalhe() {
     setEpisodeObservations("");
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (!implementation) return;
 
     const completedItems = checklistItems.filter((i) => i.is_completed);
@@ -269,18 +270,42 @@ export default function ImplantacaoDetalhe() {
     const pageWidth = doc.internal.pageSize.getWidth();
     let y = 20;
 
-    // Header
-    doc.setFillColor(220, 38, 38); // Red color
-    doc.rect(0, 0, pageWidth, 30, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("RELATÓRIO DE IMPLANTAÇÃO", pageWidth / 2, 15, { align: "center" });
-    doc.setFontSize(12);
-    doc.text("MAX IMPLANTAÇÕES", pageWidth / 2, 23, { align: "center" });
+    // Load logo as base64
+    const loadImage = (src: string): Promise<string> => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/jpeg"));
+        };
+        img.src = src;
+      });
+    };
 
-    y = 45;
-    doc.setTextColor(0, 0, 0);
+    try {
+      const logoBase64 = await loadImage(logo);
+
+      // Header with logo
+      doc.setFillColor(220, 38, 38); // Red color
+      doc.rect(0, 0, pageWidth, 35, "F");
+      
+      // Add logo
+      doc.addImage(logoBase64, "JPEG", 15, 5, 25, 25);
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("RELATÓRIO DE IMPLANTAÇÃO", pageWidth / 2 + 10, 15, { align: "center" });
+      doc.setFontSize(12);
+      doc.text("MAX IMPLANTAÇÕES", pageWidth / 2 + 10, 25, { align: "center" });
+
+      y = 50;
+      doc.setTextColor(0, 0, 0);
 
     // Client Data Section
     doc.setFillColor(245, 245, 245);
@@ -426,6 +451,14 @@ export default function ImplantacaoDetalhe() {
       title: "PDF gerado!",
       description: "O relatório foi baixado com sucesso.",
     });
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível gerar o relatório.",
+      });
+    }
   };
 
   const getProgress = () => {
