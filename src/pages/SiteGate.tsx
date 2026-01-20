@@ -6,9 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.jpeg";
-
-const SITE_PASSWORD = "max@5699";
 
 export default function SiteGate() {
   const [password, setPassword] = useState("");
@@ -22,23 +21,37 @@ export default function SiteGate() {
     setLoading(true);
     setError(false);
 
-    // Simulate a small delay for UX
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    if (password === SITE_PASSWORD) {
-      // Store access in sessionStorage (valid only for this session)
-      sessionStorage.setItem("site_access_granted", "true");
-      toast({
-        title: "Acesso autorizado!",
-        description: "Redirecionando para o login...",
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('validate-site-access', {
+        body: { password }
       });
-      navigate("/login");
-    } else {
+
+      if (fnError) {
+        throw fnError;
+      }
+
+      if (data?.success) {
+        sessionStorage.setItem("site_access_granted", "true");
+        toast({
+          title: "Acesso autorizado!",
+          description: "Redirecionando para o login...",
+        });
+        navigate("/login");
+      } else {
+        setError(true);
+        toast({
+          variant: "destructive",
+          title: "Acesso negado",
+          description: "Senha incorreta. Tente novamente.",
+        });
+      }
+    } catch (err) {
+      console.error('Error validating access:', err);
       setError(true);
       toast({
         variant: "destructive",
-        title: "Acesso negado",
-        description: "Senha incorreta. Tente novamente.",
+        title: "Erro",
+        description: "Erro ao validar acesso. Tente novamente.",
       });
     }
     setLoading(false);
