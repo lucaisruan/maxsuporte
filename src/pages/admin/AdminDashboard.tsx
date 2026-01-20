@@ -12,12 +12,14 @@ import {
   Plus, 
   Loader2,
   Building2,
-  Clock
+  Clock,
+  CalendarClock
 } from "lucide-react";
 
 interface Implementation {
   id: string;
   status: string;
+  implementation_type: string | null;
   start_date: string;
   total_time_minutes: number;
   client: { name: string } | null;
@@ -27,6 +29,7 @@ interface Implementation {
 
 interface Stats {
   totalImplementations: number;
+  scheduled: number;
   inProgress: number;
   completed: number;
   totalUsers: number;
@@ -36,6 +39,7 @@ export default function AdminDashboard() {
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalImplementations: 0,
+    scheduled: 0,
     inProgress: 0,
     completed: 0,
     totalUsers: 0,
@@ -54,6 +58,7 @@ export default function AdminDashboard() {
         .select(`
           id,
           status,
+          implementation_type,
           start_date,
           total_time_minutes,
           implementer_id,
@@ -88,6 +93,11 @@ export default function AdminDashboard() {
         .from("implementations")
         .select("*", { count: "exact", head: true });
 
+      const { count: scheduled } = await supabase
+        .from("implementations")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "agendada");
+
       const { count: inProgress } = await supabase
         .from("implementations")
         .select("*", { count: "exact", head: true })
@@ -104,6 +114,7 @@ export default function AdminDashboard() {
 
       setStats({
         totalImplementations: totalImpl || 0,
+        scheduled: scheduled || 0,
         inProgress: inProgress || 0,
         completed: completed || 0,
         totalUsers: totalUsers || 0,
@@ -123,6 +134,7 @@ export default function AdminDashboard() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+      agendada: { variant: "secondary", label: "Agendada" },
       em_andamento: { variant: "default", label: "Em Andamento" },
       pausada: { variant: "secondary", label: "Pausada" },
       concluida: { variant: "outline", label: "Concluída" },
@@ -130,6 +142,20 @@ export default function AdminDashboard() {
     };
     const config = variants[status] || variants.em_andamento;
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getImplementationTypeBadge = (type: string | null) => {
+    if (!type) return null;
+    const labels: Record<string, string> = {
+      web: "Web",
+      manager: "Manager",
+      basic: "Basic",
+    };
+    return (
+      <Badge variant="outline" className="text-xs">
+        {labels[type] || type}
+      </Badge>
+    );
   };
 
   const formatTime = (minutes: number) => {
@@ -165,14 +191,23 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total de Implantações</CardTitle>
+              <CardTitle className="text-sm font-medium">Total</CardTitle>
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalImplementations}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Agendadas</CardTitle>
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{stats.scheduled}</div>
             </CardContent>
           </Card>
           <Card>
@@ -231,9 +266,12 @@ export default function AdminDashboard() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <h3 className="font-medium text-foreground">
-                            {impl.client?.name || "Cliente não definido"}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-foreground">
+                              {impl.client?.name || "Cliente não definido"}
+                            </h3>
+                            {getImplementationTypeBadge(impl.implementation_type)}
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             Implantador: {impl.implementer?.name || "Não atribuído"}
                           </p>

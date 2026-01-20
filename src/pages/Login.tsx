@@ -29,6 +29,25 @@ export default function Login() {
       if (error) throw error;
 
       if (data.user) {
+        // Check if user is active
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("is_active")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+
+        if (profileData?.is_active === false) {
+          // Sign out the user immediately
+          await supabase.auth.signOut();
+          toast({
+            variant: "destructive",
+            title: "Acesso bloqueado",
+            description: "Sua conta foi desativada. Entre em contato com o administrador.",
+          });
+          setLoading(false);
+          return;
+        }
+
         // Fetch user role to redirect correctly
         const { data: roleData } = await supabase
           .from("user_roles")
