@@ -4,10 +4,10 @@ import { useAuth } from "@/lib/auth";
 import {
   LayoutDashboard,
   Users,
-  FileText,
   ClipboardList,
-  Settings,
   X,
+  BarChart3,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -23,7 +23,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const adminLinks = [
     { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/admin/implantacoes", icon: ClipboardList, label: "Implantações" },
-    { to: "/admin/usuarios", icon: Users, label: "Usuários" },
+    { to: "/admin/usuarios", icon: Users, label: "Gestão de Usuários" },
+    { to: "/admin/relatorios", icon: BarChart3, label: "Produtividade" },
+    { to: "/admin/disponibilidade", icon: Calendar, label: "Disponibilidade" },
   ];
 
   const implantadorLinks = [
