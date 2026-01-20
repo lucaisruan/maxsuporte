@@ -159,11 +159,15 @@ export type Database = {
       }
       implementations: {
         Row: {
+          actual_start_date: string | null
           client_id: string
           created_at: string
           created_by: string | null
           end_date: string | null
           id: string
+          implementation_type:
+            | Database["public"]["Enums"]["implementation_type"]
+            | null
           implementer_id: string | null
           observations: string | null
           start_date: string
@@ -172,11 +176,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actual_start_date?: string | null
           client_id: string
           created_at?: string
           created_by?: string | null
           end_date?: string | null
           id?: string
+          implementation_type?:
+            | Database["public"]["Enums"]["implementation_type"]
+            | null
           implementer_id?: string | null
           observations?: string | null
           start_date?: string
@@ -185,11 +193,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actual_start_date?: string | null
           client_id?: string
           created_at?: string
           created_by?: string | null
           end_date?: string | null
           id?: string
+          implementation_type?:
+            | Database["public"]["Enums"]["implementation_type"]
+            | null
           implementer_id?: string | null
           observations?: string | null
           start_date?: string
@@ -212,6 +224,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_active: boolean
           name: string
           updated_at: string
           user_id: string
@@ -220,6 +233,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          is_active?: boolean
           name: string
           updated_at?: string
           user_id: string
@@ -228,6 +242,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_active?: boolean
           name?: string
           updated_at?: string
           user_id?: string
@@ -275,6 +290,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_scheduled_implementations: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "implantador"
@@ -288,6 +304,8 @@ export type Database = {
         | "pausada"
         | "concluida"
         | "cancelada"
+        | "agendada"
+      implementation_type: "web" | "manager" | "basic"
       module_type:
         | "vendas"
         | "financeiro"
@@ -435,7 +453,9 @@ export const Constants = {
         "pausada",
         "concluida",
         "cancelada",
+        "agendada",
       ],
+      implementation_type: ["web", "manager", "basic"],
       module_type: [
         "vendas",
         "financeiro",

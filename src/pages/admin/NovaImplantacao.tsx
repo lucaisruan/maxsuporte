@@ -21,6 +21,8 @@ export default function NovaImplantacao() {
   const [clientName, setClientName] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [implementerId, setImplementerId] = useState("");
+  const [implementationType, setImplementationType] = useState<string>("");
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [observations, setObservations] = useState("");
   const [implementers, setImplementers] = useState<Implementer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,7 +37,7 @@ export default function NovaImplantacao() {
 
   const fetchImplementers = async () => {
     try {
-      // Get all users with implantador role
+      // Get all active users with implantador role
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -45,8 +47,9 @@ export default function NovaImplantacao() {
         const userIds = roleData.map((r) => r.user_id);
         const { data: profilesData } = await supabase
           .from("profiles")
-          .select("user_id, name")
-          .in("user_id", userIds);
+          .select("user_id, name, is_active")
+          .in("user_id", userIds)
+          .eq("is_active", true);
 
         if (profilesData) {
           setImplementers(profilesData);
@@ -71,6 +74,24 @@ export default function NovaImplantacao() {
       return;
     }
 
+    if (!implementationType) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione o tipo de implantação.",
+      });
+      return;
+    }
+
+    if (!startDate) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione a data de início.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -88,12 +109,21 @@ export default function NovaImplantacao() {
 
       if (clientError) throw clientError;
 
+      // Determine status based on start date
+      const today = new Date().toISOString().split("T")[0];
+      const isScheduled = startDate > today;
+      const status = isScheduled ? "agendada" : "em_andamento";
+
       // Create implementation
       const { data: implData, error: implError } = await supabase
         .from("implementations")
         .insert({
           client_id: clientData.id,
           implementer_id: implementerId,
+          implementation_type: implementationType as "web" | "manager" | "basic",
+          start_date: new Date(startDate).toISOString(),
+          actual_start_date: isScheduled ? null : new Date().toISOString(),
+          status: status as "agendada" | "em_andamento",
           observations,
           created_by: user?.id,
         })
@@ -125,8 +155,10 @@ export default function NovaImplantacao() {
       if (checklistError) throw checklistError;
 
       toast({
-        title: "Implantação criada!",
-        description: "A implantação foi criada com sucesso.",
+        title: isScheduled ? "Implantação agendada!" : "Implantação criada!",
+        description: isScheduled
+          ? `A implantação foi agendada para ${new Date(startDate).toLocaleDateString("pt-BR")}.`
+          : "A implantação foi criada com sucesso.",
       });
 
       navigate("/admin/implantacoes");
@@ -139,6 +171,15 @@ export default function NovaImplantacao() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getImplementationTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      web: "Web",
+      manager: "Manager",
+      basic: "Basic",
+    };
+    return labels[type] || type;
   };
 
   return (
@@ -184,6 +225,37 @@ export default function NovaImplantacao() {
                 />
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="implementationType">Tipo de Implantação *</Label>
+                  <Select value={implementationType} onValueChange={setImplementationType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="web">Web</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="basic">Basic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Data de Início *</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Datas futuras criam implantações agendadas
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="implementer">Implantador Responsável *</Label>
                 {loadingImplementers ? (
@@ -199,7 +271,7 @@ export default function NovaImplantacao() {
                     <SelectContent>
                       {implementers.length === 0 ? (
                         <SelectItem value="" disabled>
-                          Nenhum implantador cadastrado
+                          Nenhum implantador ativo
                         </SelectItem>
                       ) : (
                         implementers.map((impl) => (
