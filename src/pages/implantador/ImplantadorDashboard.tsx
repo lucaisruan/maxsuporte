@@ -11,6 +11,7 @@ import { ClipboardList, Clock, Loader2 } from "lucide-react";
 interface Implementation {
   id: string;
   status: string;
+  implementation_type: string | null;
   start_date: string;
   total_time_minutes: number;
   client: { name: string } | null;
@@ -30,17 +31,20 @@ export default function ImplantadorDashboard() {
 
   const fetchImplementations = async () => {
     try {
+      // Fetch only non-scheduled implementations for implantador
       const { data } = await supabase
         .from("implementations")
         .select(`
           id,
           status,
+          implementation_type,
           start_date,
           total_time_minutes,
           client:clients(name),
           checklist_items(is_completed)
         `)
         .eq("implementer_id", user?.id)
+        .neq("status", "agendada")
         .order("created_at", { ascending: false });
 
       if (data) {
@@ -68,6 +72,20 @@ export default function ImplantadorDashboard() {
     };
     const config = variants[status] || variants.em_andamento;
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getImplementationTypeBadge = (type: string | null) => {
+    if (!type) return null;
+    const labels: Record<string, string> = {
+      web: "Web",
+      manager: "Manager",
+      basic: "Basic",
+    };
+    return (
+      <Badge variant="outline" className="text-xs">
+        {labels[type] || type}
+      </Badge>
+    );
   };
 
   const formatTime = (minutes: number) => {
@@ -154,9 +172,12 @@ export default function ImplantadorDashboard() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <h3 className="font-medium text-foreground">
-                            {impl.client?.name || "Cliente não definido"}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-foreground">
+                              {impl.client?.name || "Cliente não definido"}
+                            </h3>
+                            {getImplementationTypeBadge(impl.implementation_type)}
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             Início: {new Date(impl.start_date).toLocaleDateString("pt-BR")}
                           </p>

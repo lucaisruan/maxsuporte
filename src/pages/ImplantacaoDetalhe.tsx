@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Plus, Clock, FileText, Copy } from "lucide-react";
+import { useTimer } from "@/hooks/useTimer";
+import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer } from "lucide-react";
 
 interface ChecklistItem {
   id: string;
@@ -41,6 +42,7 @@ interface Episode {
 interface Implementation {
   id: string;
   status: string;
+  implementation_type: string | null;
   start_date: string;
   end_date: string | null;
   total_time_minutes: number;
@@ -53,6 +55,7 @@ export default function ImplantacaoDetalhe() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, role } = useAuth();
+  const timer = useTimer();
 
   const [implementation, setImplementation] = useState<Implementation | null>(null);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
@@ -70,6 +73,7 @@ export default function ImplantacaoDetalhe() {
   const [endTime, setEndTime] = useState("");
   const [episodeObservations, setEpisodeObservations] = useState("");
   const [savingEpisode, setSavingEpisode] = useState(false);
+  const [useTimerMode, setUseTimerMode] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -85,6 +89,7 @@ export default function ImplantacaoDetalhe() {
         .select(`
           id,
           status,
+          implementation_type,
           start_date,
           end_date,
           total_time_minutes,
@@ -181,6 +186,18 @@ export default function ImplantacaoDetalhe() {
     );
   };
 
+  const handleStartTimer = () => {
+    setUseTimerMode(true);
+    timer.startTimer();
+    setStartTime(timer.getStartTime() || new Date().toTimeString().slice(0, 5));
+    setEpisodeDate(new Date().toISOString().split("T")[0]);
+  };
+
+  const handleStopTimer = () => {
+    timer.stopTimer();
+    setEndTime(new Date().toTimeString().slice(0, 5));
+  };
+
   const handleAddEpisode = async () => {
     if (!episodeType || !episodeModule || !episodeDate || !startTime || !endTime) {
       toast({
@@ -256,6 +273,18 @@ export default function ImplantacaoDetalhe() {
     setStartTime("");
     setEndTime("");
     setEpisodeObservations("");
+    setUseTimerMode(false);
+    timer.resetTimer();
+  };
+
+  const getImplementationTypeLabel = (type: string | null) => {
+    if (!type) return null;
+    const labels: Record<string, string> = {
+      web: "Web",
+      manager: "Manager",
+      basic: "Basic",
+    };
+    return labels[type] || type;
   };
 
   const generateReport = () => {
@@ -263,6 +292,7 @@ export default function ImplantacaoDetalhe() {
 
     const completedItems = checklistItems.filter((i) => i.is_completed);
     const pendingItems = checklistItems.filter((i) => !i.is_completed);
+    const implType = getImplementationTypeLabel(implementation.implementation_type);
 
     const report = `
 ═══════════════════════════════════════════════
@@ -274,6 +304,7 @@ export default function ImplantacaoDetalhe() {
 ───────────────────────────────────────────────
 Cliente: ${implementation.client?.name || "N/A"}
 CNPJ: ${implementation.client?.cnpj || "N/A"}
+${implType ? `Tipo: ${implType}` : ""}
 
 📅 PERÍODO
 ───────────────────────────────────────────────
@@ -347,6 +378,18 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
     return labels[module] || module;
   };
 
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+      agendada: { variant: "secondary", label: "Agendada" },
+      em_andamento: { variant: "default", label: "Em Andamento" },
+      pausada: { variant: "secondary", label: "Pausada" },
+      concluida: { variant: "outline", label: "Concluída" },
+      cancelada: { variant: "destructive", label: "Cancelada" },
+    };
+    const config = variants[status] || variants.em_andamento;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -371,6 +414,7 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
   }
 
   const isImplantador = role === "implantador";
+  const implType = getImplementationTypeLabel(implementation.implementation_type);
 
   return (
     <DashboardLayout>
@@ -382,15 +426,23 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {implementation.client?.name}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-foreground">
+                  {implementation.client?.name}
+                </h1>
+                {implType && (
+                  <Badge variant="outline" className="text-xs">
+                    {implType}
+                  </Badge>
+                )}
+              </div>
               <p className="text-muted-foreground">
                 {implementation.client?.cnpj || "CNPJ não informado"}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {getStatusBadge(implementation.status)}
             <Button variant="outline" onClick={generateReport}>
               <Copy className="mr-2 h-4 w-4" />
               Copiar Relatório
@@ -533,7 +585,10 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
               <CardDescription>Treinamentos, parametrizações e ajustes</CardDescription>
             </div>
             {isImplantador && (
-              <Dialog open={episodeDialogOpen} onOpenChange={setEpisodeDialogOpen}>
+              <Dialog open={episodeDialogOpen} onOpenChange={(open) => {
+                setEpisodeDialogOpen(open);
+                if (!open) resetEpisodeForm();
+              }}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
@@ -548,6 +603,48 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
+                    {/* Timer Section */}
+                    <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Timer className="h-5 w-5 text-primary" />
+                          <span className="font-medium">Timer (Opcional)</span>
+                        </div>
+                        {timer.isRunning ? (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleStopTimer}
+                          >
+                            <Square className="mr-2 h-4 w-4" />
+                            Parar
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleStartTimer}
+                            disabled={useTimerMode && !timer.isRunning}
+                          >
+                            <Play className="mr-2 h-4 w-4" />
+                            Iniciar
+                          </Button>
+                        )}
+                      </div>
+                      {(timer.isRunning || useTimerMode) && (
+                        <div className="mt-3 text-center">
+                          <p className="text-3xl font-mono font-bold text-primary">
+                            {timer.formattedTime}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {timer.isRunning ? "Cronômetro em execução..." : "Timer finalizado"}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Tipo *</Label>
