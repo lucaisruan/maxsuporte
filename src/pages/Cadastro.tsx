@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Lock, User } from "lucide-react";
 
@@ -13,7 +12,6 @@ export default function Cadastro() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "implantador">("implantador");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -30,7 +28,7 @@ export default function Cadastro() {
           emailRedirectTo: window.location.origin,
           data: {
             name,
-            role,
+            role: "implantador", // Always implantador - admin must be created manually
           },
         },
       });
@@ -64,7 +62,7 @@ export default function Cadastro() {
           </div>
           <CardTitle className="text-2xl">Criar Conta</CardTitle>
           <CardDescription>
-            Cadastre-se no MAX IMPLANTAÇÕES
+            Cadastre-se como Implantador no MAX IMPLANTAÇÕES
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSignUp}>
@@ -114,18 +112,6 @@ export default function Cadastro() {
                   required
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Tipo de Usuário</Label>
-              <Select value={role} onValueChange={(value: "admin" | "implantador") => setRole(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="implantador">Implantador</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
