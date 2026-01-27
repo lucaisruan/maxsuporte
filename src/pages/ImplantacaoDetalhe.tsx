@@ -62,6 +62,7 @@ export default function ImplantacaoDetalhe() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingItem, setSavingItem] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Episode form state
   const [episodeDialogOpen, setEpisodeDialogOpen] = useState(false);
@@ -390,6 +391,39 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (!implementation || role !== "admin") return;
+    
+    setUpdatingStatus(true);
+    try {
+      const { error } = await supabase
+        .from("implementations")
+        .update({ status: newStatus as "agendada" | "em_andamento" | "pausada" | "concluida" | "cancelada" })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setImplementation((prev) =>
+        prev ? { ...prev, status: newStatus } : null
+      );
+
+      toast({
+        title: "Status atualizado!",
+        description: newStatus === "concluida" 
+          ? "Implantação concluída com sucesso. A comissão foi calculada automaticamente."
+          : `Status alterado para ${newStatus.replace("_", " ")}.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar status",
+        description: error.message,
+      });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -441,8 +475,31 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {getStatusBadge(implementation.status)}
+          <div className="flex items-center gap-2 flex-wrap">
+            {role === "admin" ? (
+              <Select 
+                value={implementation.status} 
+                onValueChange={handleStatusChange}
+                disabled={updatingStatus}
+              >
+                <SelectTrigger className="w-[180px]">
+                  {updatingStatus ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <SelectValue />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="agendada">Agendada</SelectItem>
+                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                  <SelectItem value="pausada">Pausada</SelectItem>
+                  <SelectItem value="concluida">Concluída</SelectItem>
+                  <SelectItem value="cancelada">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              getStatusBadge(implementation.status)
+            )}
             <Button variant="outline" onClick={generateReport}>
               <Copy className="mr-2 h-4 w-4" />
               Copiar Relatório
