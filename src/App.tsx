@@ -5,8 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { SiteGateGuard } from "@/components/SiteGateGuard";
-import SiteGate from "./pages/SiteGate";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -34,38 +32,29 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Site Gate - first access point */}
-      <Route path="/gate" element={<SiteGate />} />
-
-      {/* Public routes - require site gate access */}
+      {/* Public routes */}
       <Route
         path="/login"
         element={
-          <SiteGateGuard>
-            {user ? <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace /> : <Login />}
-          </SiteGateGuard>
+          user ? <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace /> : <Login />
         }
       />
       <Route
         path="/cadastro"
         element={
-          <SiteGateGuard>
-            {user ? <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace /> : <Cadastro />}
-          </SiteGateGuard>
+          user ? <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace /> : <Cadastro />
         }
       />
 
-      {/* Redirect root to appropriate dashboard or gate */}
+      {/* Redirect root to appropriate dashboard or login */}
       <Route
         path="/"
         element={
-          <SiteGateGuard>
-            {user ? (
-              <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )}
-          </SiteGateGuard>
+          user ? (
+            <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
         }
       />
 
@@ -73,71 +62,57 @@ function AppRoutes() {
       <Route
         path="/admin"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/admin/implantacoes"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <ImplantacoesAdmin />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <ImplantacoesAdmin />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/admin/implantacoes/nova"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <NovaImplantacao />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <NovaImplantacao />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/admin/implantacoes/:id"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <ImplantacaoDetalhe />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <ImplantacaoDetalhe />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/admin/usuarios"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <UsuariosAdmin />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <UsuariosAdmin />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/admin/relatorios"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <RelatoriosProdutividade />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <RelatoriosProdutividade />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/admin/disponibilidade"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <DisponibilidadeCalendario />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <DisponibilidadeCalendario />
+          </ProtectedRoute>
         }
       />
 
@@ -145,31 +120,25 @@ function AppRoutes() {
       <Route
         path="/implantador"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["implantador"]}>
-              <ImplantadorDashboard />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["implantador"]}>
+            <ImplantadorDashboard />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/implantador/implantacoes"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["implantador"]}>
-              <ImplantadorDashboard />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["implantador"]}>
+            <ImplantadorDashboard />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/implantador/implantacoes/:id"
         element={
-          <SiteGateGuard>
-            <ProtectedRoute allowedRoles={["implantador"]}>
-              <ImplantacaoDetalhe />
-            </ProtectedRoute>
-          </SiteGateGuard>
+          <ProtectedRoute allowedRoles={["implantador"]}>
+            <ImplantacaoDetalhe />
+          </ProtectedRoute>
         }
       />
 
