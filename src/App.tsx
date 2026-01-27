@@ -13,6 +13,8 @@ import NovaImplantacao from "./pages/admin/NovaImplantacao";
 import UsuariosAdmin from "./pages/admin/UsuariosAdmin";
 import RelatoriosProdutividade from "./pages/admin/RelatoriosProdutividade";
 import DisponibilidadeCalendario from "./pages/admin/DisponibilidadeCalendario";
+import ConfiguracaoComissoes from "./pages/admin/ConfiguracaoComissoes";
+import RelatorioComissoes from "./pages/admin/RelatorioComissoes";
 import ImplantadorDashboard from "./pages/implantador/ImplantadorDashboard";
 import ImplantacaoDetalhe from "./pages/ImplantacaoDetalhe";
 import NotFound from "./pages/NotFound";
@@ -112,6 +114,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <DisponibilidadeCalendario />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/comissoes"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <ConfiguracaoComissoes />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/relatorio-comissoes"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <RelatorioComissoes />
           </ProtectedRoute>
         }
       />

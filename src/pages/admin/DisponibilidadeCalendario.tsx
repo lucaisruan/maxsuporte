@@ -4,9 +4,8 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, ChevronLeft, ChevronRight, User, Clock } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, User, Clock, Briefcase } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -21,6 +20,16 @@ interface Episode {
   episode_type: string;
 }
 
+interface Implementation {
+  id: string;
+  start_date: string;
+  end_date: string | null;
+  status: string;
+  implementer_id: string | null;
+  client: { name: string };
+  implementation_type: string | null;
+}
+
 interface Implementer {
   user_id: string;
   name: string;
@@ -30,12 +39,14 @@ interface Implementer {
 interface DaySchedule {
   implementer: Implementer;
   episodes: Episode[];
+  implementations: Implementation[];
   totalMinutes: number;
 }
 
 export default function DisponibilidadeCalendario() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [implementers, setImplementers] = useState<Implementer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -79,6 +90,23 @@ export default function DisponibilidadeCalendario() {
       if (episodesData) {
         setEpisodes(episodesData);
       }
+
+      // Fetch implementations that overlap with the current month (for scheduled/ongoing implementations)
+      const { data: implData } = await supabase
+        .from("implementations")
+        .select("id, start_date, end_date, status, implementer_id, implementation_type, client:clients(name)")
+        .in("status", ["em_andamento", "agendada", "pausada"])
+        .lte("start_date", end + "T23:59:59")
+        .or(`end_date.is.null,end_date.gte.${start}`);
+
+      if (implData) {
+        // Type assertion for the client relation
+        const typedData = implData.map(impl => ({
+          ...impl,
+          client: impl.client as { name: string }
+        }));
+        setImplementations(typedData);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -89,10 +117,20 @@ export default function DisponibilidadeCalendario() {
   const getDaySchedules = (date: Date): DaySchedule[] => {
     const dateStr = format(date, "yyyy-MM-dd");
     const dayEpisodes = episodes.filter((e) => e.episode_date === dateStr);
+    
+    // Filter implementations that are active on this date
+    const dayImplementations = implementations.filter((impl) => {
+      const startDate = format(new Date(impl.start_date), "yyyy-MM-dd");
+      const endDate = impl.end_date ? format(new Date(impl.end_date), "yyyy-MM-dd") : null;
+      
+      // Implementation is active if: start_date <= date AND (end_date is null OR end_date >= date)
+      return startDate <= dateStr && (endDate === null || endDate >= dateStr);
+    });
 
     return implementers
       .map((impl) => {
         const implEpisodes = dayEpisodes.filter((e) => e.created_by === impl.user_id);
+        const implImplementations = dayImplementations.filter((i) => i.implementer_id === impl.user_id);
         const totalMinutes = implEpisodes.reduce((acc, e) => {
           const start = new Date(`2000-01-01T${e.start_time}`);
           const end = new Date(`2000-01-01T${e.end_time}`);
@@ -101,10 +139,11 @@ export default function DisponibilidadeCalendario() {
         return {
           implementer: impl,
           episodes: implEpisodes,
+          implementations: implImplementations,
           totalMinutes,
         };
       })
-      .sort((a, b) => b.episodes.length - a.episodes.length);
+      .sort((a, b) => (b.episodes.length + b.implementations.length) - (a.episodes.length + a.implementations.length));
   };
 
   const getEpisodeTypeLabel = (type: string) => {
@@ -138,7 +177,19 @@ export default function DisponibilidadeCalendario() {
 
   const hasBusyImplementers = (date: Date): boolean => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return episodes.some((e) => e.episode_date === dateStr);
+    
+    // Check for episodes on this date
+    const hasEpisodes = episodes.some((e) => e.episode_date === dateStr);
+    if (hasEpisodes) return true;
+    
+    // Check for implementations active on this date
+    const hasImplementations = implementations.some((impl) => {
+      const startDate = format(new Date(impl.start_date), "yyyy-MM-dd");
+      const endDate = impl.end_date ? format(new Date(impl.end_date), "yyyy-MM-dd") : null;
+      return startDate <= dateStr && (endDate === null || endDate >= dateStr);
+    });
+    
+    return hasImplementations;
   };
 
   const handleDayClick = (date: Date) => {
@@ -147,8 +198,27 @@ export default function DisponibilidadeCalendario() {
   };
 
   const selectedDaySchedules = selectedDate ? getDaySchedules(selectedDate) : [];
-  const busyImplementers = selectedDaySchedules.filter((s) => s.episodes.length > 0);
-  const freeImplementers = selectedDaySchedules.filter((s) => s.episodes.length === 0);
+  const busyImplementers = selectedDaySchedules.filter((s) => s.episodes.length > 0 || s.implementations.length > 0);
+  const freeImplementers = selectedDaySchedules.filter((s) => s.episodes.length === 0 && s.implementations.length === 0);
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      em_andamento: "Em Andamento",
+      agendada: "Agendada",
+      pausada: "Pausada",
+    };
+    return labels[status] || status;
+  };
+
+  const getTypeLabel = (type: string | null) => {
+    if (!type) return "";
+    const labels: Record<string, string> = {
+      web: "Web",
+      manager: "Manager",
+      basic: "Basic",
+    };
+    return labels[type] || type;
+  };
 
   if (loading) {
     return (
@@ -311,27 +381,59 @@ export default function DisponibilidadeCalendario() {
                       >
                         <div className="flex items-center justify-between">
                           <h5 className="font-medium">{schedule.implementer.name}</h5>
-                          <Badge variant="secondary">
-                            {formatTime(schedule.totalMinutes)}
-                          </Badge>
+                          {schedule.totalMinutes > 0 && (
+                            <Badge variant="secondary">
+                              {formatTime(schedule.totalMinutes)}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="mt-2 space-y-1">
-                          {schedule.episodes.map((ep) => (
-                            <div
-                              key={ep.id}
-                              className="flex items-center gap-2 text-sm text-muted-foreground"
-                            >
-                              <Clock className="h-3 w-3" />
-                              <span>
-                                {ep.start_time} - {ep.end_time}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {getEpisodeTypeLabel(ep.episode_type)}
-                              </Badge>
-                              <span className="text-xs">({getModuleLabel(ep.module)})</span>
-                            </div>
-                          ))}
-                        </div>
+                        
+                        {/* Show implementations assigned to this implementer */}
+                        {schedule.implementations.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {schedule.implementations.map((impl) => (
+                              <div
+                                key={impl.id}
+                                className="flex items-center gap-2 text-sm text-muted-foreground"
+                              >
+                                <Briefcase className="h-3 w-3" />
+                                <span className="font-medium">{impl.client?.name}</span>
+                                {impl.implementation_type && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {getTypeLabel(impl.implementation_type)}
+                                  </Badge>
+                                )}
+                                <Badge 
+                                  variant={impl.status === "em_andamento" ? "default" : "secondary"}
+                                  className="text-xs"
+                                >
+                                  {getStatusLabel(impl.status)}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Show episodes for this implementer */}
+                        {schedule.episodes.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {schedule.episodes.map((ep) => (
+                              <div
+                                key={ep.id}
+                                className="flex items-center gap-2 text-sm text-muted-foreground"
+                              >
+                                <Clock className="h-3 w-3" />
+                                <span>
+                                  {ep.start_time} - {ep.end_time}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {getEpisodeTypeLabel(ep.episode_type)}
+                                </Badge>
+                                <span className="text-xs">({getModuleLabel(ep.module)})</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
