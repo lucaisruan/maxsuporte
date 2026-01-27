@@ -8,6 +8,8 @@ import {
   X,
   BarChart3,
   Calendar,
+  DollarSign,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +28,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     { to: "/admin/usuarios", icon: Users, label: "Gestão de Usuários" },
     { to: "/admin/relatorios", icon: BarChart3, label: "Produtividade" },
     { to: "/admin/disponibilidade", icon: Calendar, label: "Disponibilidade" },
+    { to: "/admin/comissoes", icon: DollarSign, label: "Comissões" },
+    { to: "/admin/relatorio-comissoes", icon: FileText, label: "Rel. Comissões" },
   ];
 
   const implantadorLinks = [

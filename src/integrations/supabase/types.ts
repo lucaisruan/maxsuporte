@@ -101,6 +101,36 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_rules: {
+        Row: {
+          commission_value: number
+          created_at: string
+          created_by: string | null
+          id: string
+          implementation_type: Database["public"]["Enums"]["implementation_type"]
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          commission_value?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          implementation_type: Database["public"]["Enums"]["implementation_type"]
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          commission_value?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          implementation_type?: Database["public"]["Enums"]["implementation_type"]
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       episodes: {
         Row: {
           created_at: string
@@ -161,6 +191,9 @@ export type Database = {
         Row: {
           actual_start_date: string | null
           client_id: string
+          commission_paid: boolean
+          commission_paid_at: string | null
+          commission_value: number | null
           created_at: string
           created_by: string | null
           end_date: string | null
@@ -178,6 +211,9 @@ export type Database = {
         Insert: {
           actual_start_date?: string | null
           client_id: string
+          commission_paid?: boolean
+          commission_paid_at?: string | null
+          commission_value?: number | null
           created_at?: string
           created_by?: string | null
           end_date?: string | null
@@ -195,6 +231,9 @@ export type Database = {
         Update: {
           actual_start_date?: string | null
           client_id?: string
+          commission_paid?: boolean
+          commission_paid_at?: string | null
+          commission_value?: number | null
           created_at?: string
           created_by?: string | null
           end_date?: string | null
@@ -278,6 +317,10 @@ export type Database = {
       create_default_checklist: {
         Args: { impl_id: string }
         Returns: undefined
+      }
+      get_active_commission: {
+        Args: { impl_type: Database["public"]["Enums"]["implementation_type"] }
+        Returns: number
       }
       get_user_role: {
         Args: { _user_id: string }
