@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useTimer } from "@/hooks/useTimer";
 import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer } from "lucide-react";
+import { ChecklistItemCard } from "@/components/checklist/ChecklistItemCard";
 
 interface ChecklistItem {
   id: string;
@@ -132,7 +132,7 @@ export default function ImplantacaoDetalhe() {
     }
   };
 
-  const handleChecklistUpdate = async (
+  const handleChecklistUpdate = useCallback(async (
     itemId: string,
     field: "is_completed" | "time_spent_minutes" | "observations",
     value: boolean | number | string
@@ -157,9 +157,9 @@ export default function ImplantacaoDetalhe() {
         )
       );
 
-      // Recalculate total time
+      // Recalculate total time from database (not from stale state)
       if (field === "time_spent_minutes") {
-        await updateTotalTime();
+        await recalculateTotalTimeFromDB();
       }
     } catch (error: any) {
       toast({
@@ -170,11 +170,32 @@ export default function ImplantacaoDetalhe() {
     } finally {
       setSavingItem(null);
     }
-  };
+  }, [role, id, toast]);
 
-  const updateTotalTime = async () => {
-    const checklistTime = checklistItems.reduce((acc, item) => acc + item.time_spent_minutes, 0);
-    const episodesTime = episodes.reduce((acc, ep) => acc + ep.time_spent_minutes, 0);
+  // Recalculates total time by fetching fresh data from database
+  const recalculateTotalTimeFromDB = useCallback(async () => {
+    if (!id) return;
+
+    // Fetch fresh checklist times from DB
+    const { data: checklistData } = await supabase
+      .from("checklist_items")
+      .select("time_spent_minutes")
+      .eq("implementation_id", id);
+
+    // Fetch fresh episode times from DB
+    const { data: episodesData } = await supabase
+      .from("episodes")
+      .select("time_spent_minutes")
+      .eq("implementation_id", id);
+
+    const checklistTime = (checklistData || []).reduce(
+      (acc, item) => acc + (item.time_spent_minutes || 0),
+      0
+    );
+    const episodesTime = (episodesData || []).reduce(
+      (acc, ep) => acc + (ep.time_spent_minutes || 0),
+      0
+    );
     const totalTime = checklistTime + episodesTime;
 
     await supabase
@@ -185,7 +206,7 @@ export default function ImplantacaoDetalhe() {
     setImplementation((prev) =>
       prev ? { ...prev, total_time_minutes: totalTime } : null
     );
-  };
+  }, [id]);
 
   const handleStartTimer = () => {
     setUseTimerMode(true);
@@ -249,7 +270,7 @@ export default function ImplantacaoDetalhe() {
       setEpisodes((prev) => [data, ...prev]);
       setEpisodeDialogOpen(false);
       resetEpisodeForm();
-      await updateTotalTime();
+      await recalculateTotalTimeFromDB();
 
       toast({
         title: "Episódio adicionado!",
@@ -563,72 +584,14 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
           <CardContent>
             <div className="space-y-4">
               {checklistItems.map((item) => (
-                <div
+                <ChecklistItemCard
                   key={item.id}
-                  className="rounded-lg border border-border p-4"
-                >
-                  <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={item.is_completed}
-                      disabled={!isImplantador || savingItem === item.id}
-                      onCheckedChange={(checked) =>
-                        handleChecklistUpdate(item.id, "is_completed", !!checked)
-                      }
-                    />
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium text-foreground">{item.title}</h4>
-                          {item.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
-                        {savingItem === item.id && (
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        )}
-                      </div>
-                      {isImplantador && (
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Tempo gasto (minutos)</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={item.time_spent_minutes}
-                              onChange={(e) =>
-                                handleChecklistUpdate(
-                                  item.id,
-                                  "time_spent_minutes",
-                                  parseInt(e.target.value) || 0
-                                )
-                              }
-                              className="h-8"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Observações</Label>
-                            <Input
-                              value={item.observations || ""}
-                              onChange={(e) =>
-                                handleChecklistUpdate(item.id, "observations", e.target.value)
-                              }
-                              placeholder="Adicionar observação..."
-                              className="h-8"
-                            />
-                          </div>
-                        </div>
-                      )}
-                      {!isImplantador && item.time_spent_minutes > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          Tempo: {formatTime(item.time_spent_minutes)}
-                          {item.observations && ` • ${item.observations}`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  item={item}
+                  isImplantador={isImplantador}
+                  isSaving={savingItem === item.id}
+                  onUpdate={handleChecklistUpdate}
+                  formatTime={formatTime}
+                />
               ))}
             </div>
           </CardContent>
