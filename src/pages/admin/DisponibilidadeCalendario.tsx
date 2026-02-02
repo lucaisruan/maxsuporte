@@ -118,14 +118,15 @@ export default function DisponibilidadeCalendario() {
     const dateStr = format(date, "yyyy-MM-dd");
     const dayEpisodes = episodes.filter((e) => e.episode_date === dateStr);
     
-    // Filter implementations that are active on this date
-    const dayImplementations = implementations.filter((impl) => {
-      const startDate = format(new Date(impl.start_date), "yyyy-MM-dd");
-      const endDate = impl.end_date ? format(new Date(impl.end_date), "yyyy-MM-dd") : null;
-      
-      // Implementation is active if: start_date <= date AND (end_date is null OR end_date >= date)
-      return startDate <= dateStr && (endDate === null || endDate >= dateStr);
-    });
+    // Get implementations that have episodes on this specific date
+    const implementationIdsWithEpisodes = new Set(
+      dayEpisodes.map((e) => e.implementation_id)
+    );
+    
+    // Filter implementations to only include those with episodes on this date
+    const dayImplementations = implementations.filter((impl) => 
+      implementationIdsWithEpisodes.has(impl.id)
+    );
 
     return implementers
       .map((impl) => {
@@ -178,18 +179,8 @@ export default function DisponibilidadeCalendario() {
   const hasBusyImplementers = (date: Date): boolean => {
     const dateStr = format(date, "yyyy-MM-dd");
     
-    // Check for episodes on this date
-    const hasEpisodes = episodes.some((e) => e.episode_date === dateStr);
-    if (hasEpisodes) return true;
-    
-    // Check for implementations active on this date
-    const hasImplementations = implementations.some((impl) => {
-      const startDate = format(new Date(impl.start_date), "yyyy-MM-dd");
-      const endDate = impl.end_date ? format(new Date(impl.end_date), "yyyy-MM-dd") : null;
-      return startDate <= dateStr && (endDate === null || endDate >= dateStr);
-    });
-    
-    return hasImplementations;
+    // Check ONLY for episodes on this date - not based on implementation date range
+    return episodes.some((e) => e.episode_date === dateStr);
   };
 
   const handleDayClick = (date: Date) => {

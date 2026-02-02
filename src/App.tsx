@@ -10,6 +10,7 @@ import Cadastro from "./pages/Cadastro";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ImplantacoesAdmin from "./pages/admin/ImplantacoesAdmin";
 import NovaImplantacao from "./pages/admin/NovaImplantacao";
+import EditarImplantacao from "./pages/admin/EditarImplantacao";
 import UsuariosAdmin from "./pages/admin/UsuariosAdmin";
 import RelatoriosProdutividade from "./pages/admin/RelatoriosProdutividade";
 import DisponibilidadeCalendario from "./pages/admin/DisponibilidadeCalendario";
@@ -90,6 +91,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <ImplantacaoDetalhe />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/implantacoes/:id/editar"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <EditarImplantacao />
           </ProtectedRoute>
         }
       />
