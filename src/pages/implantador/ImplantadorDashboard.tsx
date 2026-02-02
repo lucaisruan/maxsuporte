@@ -31,7 +31,8 @@ export default function ImplantadorDashboard() {
 
   const fetchImplementations = async () => {
     try {
-      // Fetch only non-scheduled implementations for implantador
+      // Fetch all implementations assigned to this implantador
+      // Including scheduled ones - they should see all their assigned work
       const { data } = await supabase
         .from("implementations")
         .select(`
@@ -44,7 +45,6 @@ export default function ImplantadorDashboard() {
           checklist_items(is_completed)
         `)
         .eq("implementer_id", user?.id)
-        .neq("status", "agendada")
         .order("created_at", { ascending: false });
 
       if (data) {
@@ -65,6 +65,7 @@ export default function ImplantadorDashboard() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+      agendada: { variant: "secondary", label: "Agendada" },
       em_andamento: { variant: "default", label: "Em Andamento" },
       pausada: { variant: "secondary", label: "Pausada" },
       concluida: { variant: "outline", label: "Concluída" },
