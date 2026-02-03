@@ -131,6 +131,39 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_types: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
       episodes: {
         Row: {
           created_at: string
@@ -180,6 +213,51 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "episodes_implementation_id_fkey"
+            columns: ["implementation_id"]
+            isOneToOne: false
+            referencedRelation: "implementations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      implementation_commissions: {
+        Row: {
+          commission_name: string
+          commission_type_id: string | null
+          commission_value: number
+          created_at: string
+          created_by: string | null
+          id: string
+          implementation_id: string
+        }
+        Insert: {
+          commission_name: string
+          commission_type_id?: string | null
+          commission_value: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          implementation_id: string
+        }
+        Update: {
+          commission_name?: string
+          commission_type_id?: string | null
+          commission_value?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          implementation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "implementation_commissions_commission_type_id_fkey"
+            columns: ["commission_type_id"]
+            isOneToOne: false
+            referencedRelation: "commission_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "implementation_commissions_implementation_id_fkey"
             columns: ["implementation_id"]
             isOneToOne: false
             referencedRelation: "implementations"

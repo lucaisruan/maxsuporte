@@ -3,67 +3,53 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, DollarSign, AlertCircle } from "lucide-react";
+import { Loader2, Plus, DollarSign, Pencil, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface CommissionRule {
-  id: string;
-  implementation_type: "web" | "manager" | "basic";
-  commission_value: number;
-  is_active: boolean;
-  updated_at: string;
-}
-
-const typeLabels: Record<string, string> = {
-  web: "Web",
-  manager: "Manager",
-  basic: "Basic",
-};
-
-const typeDescriptions: Record<string, string> = {
-  web: "Implantação completa do sistema Web",
-  manager: "Implantação do sistema Manager",
-  basic: "Implantação básica do sistema",
-};
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { CommissionTypeForm, CommissionType } from "@/components/commission/CommissionTypeForm";
 
 export default function ConfiguracaoComissoes() {
-  const [rules, setRules] = useState<CommissionRule[]>([]);
+  const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingType, setEditingType] = useState<CommissionType | null>(null);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchRules();
+    fetchCommissionTypes();
   }, []);
 
-  const fetchRules = async () => {
+  const fetchCommissionTypes = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("commission_rules")
+        .from("commission_types")
         .select("*")
-        .order("implementation_type");
+        .order("name");
 
       if (error) throw error;
 
-      // Cast the data to ensure proper typing
-      const typedData = (data || []).map(rule => ({
-        ...rule,
-        implementation_type: rule.implementation_type as "web" | "manager" | "basic",
-        commission_value: Number(rule.commission_value)
+      const typedData = (data || []).map((ct) => ({
+        ...ct,
+        value: Number(ct.value),
       }));
 
-      setRules(typedData);
+      setCommissionTypes(typedData);
     } catch (error) {
-      console.error("Error fetching commission rules:", error);
+      console.error("Error fetching commission types:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar as regras de comissão.",
+        description: "Não foi possível carregar os tipos de comissão.",
         variant: "destructive",
       });
     } finally {
@@ -71,70 +57,77 @@ export default function ConfiguracaoComissoes() {
     }
   };
 
-  const handleValueChange = (id: string, value: string) => {
-    setRules((prev) =>
-      prev.map((rule) =>
-        rule.id === id ? { ...rule, commission_value: parseFloat(value) || 0 } : rule
-      )
-    );
-  };
-
-  const handleActiveChange = async (id: string, isActive: boolean) => {
-    setSaving(id);
+  const handleSave = async (data: {
+    name: string;
+    description: string;
+    value: number;
+    is_active: boolean;
+  }) => {
+    setSaving(true);
     try {
-      const { error } = await supabase
-        .from("commission_rules")
-        .update({ is_active: isActive })
-        .eq("id", id);
+      if (editingType) {
+        // Update existing
+        const { error } = await supabase
+          .from("commission_types")
+          .update({
+            name: data.name,
+            description: data.description || null,
+            value: data.value,
+            is_active: data.is_active,
+          })
+          .eq("id", editingType.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setRules((prev) =>
-        prev.map((rule) =>
-          rule.id === id ? { ...rule, is_active: isActive } : rule
-        )
-      );
+        toast({
+          title: "Sucesso",
+          description: "Tipo de comissão atualizado.",
+        });
+      } else {
+        // Create new
+        const { error } = await supabase.from("commission_types").insert({
+          name: data.name,
+          description: data.description || null,
+          value: data.value,
+          is_active: data.is_active,
+        });
 
-      toast({
-        title: "Sucesso",
-        description: `Regra ${isActive ? "ativada" : "desativada"} com sucesso.`,
-      });
-    } catch (error) {
-      console.error("Error updating rule status:", error);
+        if (error) {
+          if (error.code === "23505") {
+            throw new Error("Já existe um tipo de comissão com este nome.");
+          }
+          throw error;
+        }
+
+        toast({
+          title: "Sucesso",
+          description: "Tipo de comissão criado.",
+        });
+      }
+
+      setFormOpen(false);
+      setEditingType(null);
+      fetchCommissionTypes();
+    } catch (error: any) {
+      console.error("Error saving commission type:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o status da regra.",
+        description: error.message || "Não foi possível salvar o tipo de comissão.",
         variant: "destructive",
       });
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   };
 
-  const handleSave = async (rule: CommissionRule) => {
-    setSaving(rule.id);
-    try {
-      const { error } = await supabase
-        .from("commission_rules")
-        .update({ commission_value: rule.commission_value })
-        .eq("id", rule.id);
+  const handleEdit = (ct: CommissionType) => {
+    setEditingType(ct);
+    setFormOpen(true);
+  };
 
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Valor da comissão atualizado com sucesso.",
-      });
-    } catch (error) {
-      console.error("Error saving commission value:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar o valor da comissão.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(null);
-    }
+  const handleNew = () => {
+    setEditingType(null);
+    setFormOpen(true);
   };
 
   const formatCurrency = (value: number) => {
@@ -157,92 +150,102 @@ export default function ConfiguracaoComissoes() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Configuração de Comissões</h1>
-          <p className="text-muted-foreground">
-            Configure os valores de comissão para cada tipo de implantação
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Configuração de Comissões
+            </h1>
+            <p className="text-muted-foreground">
+              Gerencie os tipos de comissão disponíveis
+            </p>
+          </div>
+          <Button onClick={handleNew}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Tipo de Comissão
+          </Button>
         </div>
 
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            As alterações de valores <strong>não afetam</strong> implantações já concluídas. 
-            O valor da comissão é registrado no momento em que a implantação é concluída.
+            Os valores são salvos no momento da vinculação à implantação. Alterações
+            futuras <strong>não afetam</strong> comissões já registradas.
           </AlertDescription>
         </Alert>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {rules.map((rule) => (
-            <Card key={rule.id} className={!rule.is_active ? "opacity-60" : ""}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                    {typeLabels[rule.implementation_type]}
-                  </CardTitle>
-                  <Badge variant={rule.is_active ? "default" : "secondary"}>
-                    {rule.is_active ? "Ativa" : "Inativa"}
-                  </Badge>
-                </div>
-                <CardDescription>{typeDescriptions[rule.implementation_type]}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor={`value-${rule.id}`}>Valor da Comissão (R$)</Label>
-                  <Input
-                    id={`value-${rule.id}`}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={rule.commission_value}
-                    onChange={(e) => handleValueChange(rule.id, e.target.value)}
-                    disabled={!rule.is_active}
-                    className="text-lg font-semibold"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Valor atual: {formatCurrency(rule.commission_value)}
-                  </p>
-                </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Tipos de Comissão
+            </CardTitle>
+            <CardDescription>
+              Crie e gerencie tipos de comissão customizados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {commissionTypes.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Nenhum tipo de comissão cadastrado.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {commissionTypes.map((ct) => (
+                      <TableRow
+                        key={ct.id}
+                        className={!ct.is_active ? "opacity-60" : ""}
+                      >
+                        <TableCell className="font-medium">{ct.name}</TableCell>
+                        <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                          {ct.description || "-"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(ct.value)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={ct.is_active ? "default" : "secondary"}>
+                            {ct.is_active ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(ct)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`active-${rule.id}`}
-                      checked={rule.is_active}
-                      onCheckedChange={(checked) => handleActiveChange(rule.id, checked)}
-                      disabled={saving === rule.id}
-                    />
-                    <Label htmlFor={`active-${rule.id}`}>
-                      {rule.is_active ? "Ativo" : "Inativo"}
-                    </Label>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={() => handleSave(rule)}
-                  disabled={saving === rule.id || !rule.is_active}
-                  className="w-full"
-                >
-                  {saving === rule.id ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  Salvar Valor
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {rules.length === 0 && (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              Nenhuma regra de comissão configurada.
-            </CardContent>
-          </Card>
-        )}
+        <CommissionTypeForm
+          open={formOpen}
+          onOpenChange={(open) => {
+            setFormOpen(open);
+            if (!open) setEditingType(null);
+          }}
+          commissionType={editingType}
+          onSave={handleSave}
+          isSaving={saving}
+        />
       </div>
     </DashboardLayout>
   );
