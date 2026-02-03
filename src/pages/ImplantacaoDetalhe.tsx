@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTimer } from "@/hooks/useTimer";
 import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer } from "lucide-react";
 import { ChecklistItemCard } from "@/components/checklist/ChecklistItemCard";
+import { CommissionSelectionModal } from "@/components/commission/CommissionSelectionModal";
 
 interface ChecklistItem {
   id: string;
@@ -63,6 +64,11 @@ export default function ImplantacaoDetalhe() {
   const [loading, setLoading] = useState(true);
   const [savingItem, setSavingItem] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Commission modal state
+  const [commissionModalOpen, setCommissionModalOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [savingCommissions, setSavingCommissions] = useState(false);
 
   // Episode form state
   const [episodeDialogOpen, setEpisodeDialogOpen] = useState(false);
@@ -415,6 +421,18 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
   const handleStatusChange = async (newStatus: string) => {
     if (!implementation || role !== "admin") return;
     
+    // If changing to "concluida", open commission modal first
+    if (newStatus === "concluida" && implementation.status !== "concluida") {
+      setPendingStatus(newStatus);
+      setCommissionModalOpen(true);
+      return;
+    }
+
+    // For other status changes, proceed directly
+    await updateImplementationStatus(newStatus);
+  };
+
+  const updateImplementationStatus = async (newStatus: string) => {
     setUpdatingStatus(true);
     try {
       const { error } = await supabase
@@ -430,9 +448,7 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
 
       toast({
         title: "Status atualizado!",
-        description: newStatus === "concluida" 
-          ? "Implantação concluída com sucesso. A comissão foi calculada automaticamente."
-          : `Status alterado para ${newStatus.replace("_", " ")}.`,
+        description: `Status alterado para ${newStatus.replace("_", " ")}.`,
       });
     } catch (error: any) {
       toast({
@@ -442,6 +458,62 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
       });
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const handleCommissionConfirm = async (selectedCommissions: { id: string; name: string; value: number }[]) => {
+    if (!id || !pendingStatus) return;
+
+    setSavingCommissions(true);
+    try {
+      // Insert commission records
+      const commissionsToInsert = selectedCommissions.map((ct) => ({
+        implementation_id: id,
+        commission_type_id: ct.id,
+        commission_name: ct.name,
+        commission_value: ct.value,
+        created_by: user?.id,
+      }));
+
+      const { error: commissionError } = await supabase
+        .from("implementation_commissions")
+        .insert(commissionsToInsert);
+
+      if (commissionError) throw commissionError;
+
+      // Calculate total commission value
+      const totalCommission = selectedCommissions.reduce((acc, ct) => acc + ct.value, 0);
+
+      // Now update the implementation status to concluida with the total commission
+      const { error: statusError } = await supabase
+        .from("implementations")
+        .update({ 
+          status: pendingStatus as "concluida",
+          commission_value: totalCommission 
+        })
+        .eq("id", id);
+
+      if (statusError) throw statusError;
+
+      setImplementation((prev) =>
+        prev ? { ...prev, status: pendingStatus } : null
+      );
+
+      setCommissionModalOpen(false);
+      setPendingStatus(null);
+
+      toast({
+        title: "Implantação concluída!",
+        description: `${selectedCommissions.length} comissão(ões) vinculada(s) com sucesso.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao vincular comissões",
+        description: error.message,
+      });
+    } finally {
+      setSavingCommissions(false);
     }
   };
 
@@ -803,6 +875,18 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
             )}
           </CardContent>
         </Card>
+
+        {/* Commission Selection Modal */}
+        <CommissionSelectionModal
+          open={commissionModalOpen}
+          onOpenChange={(open) => {
+            setCommissionModalOpen(open);
+            if (!open) setPendingStatus(null);
+          }}
+          implementationId={id || ""}
+          onConfirm={handleCommissionConfirm}
+          isConfirming={savingCommissions}
+        />
       </div>
     </DashboardLayout>
   );

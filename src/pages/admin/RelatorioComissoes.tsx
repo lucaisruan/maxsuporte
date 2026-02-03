@@ -22,10 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Search, DollarSign, CheckCircle2, Clock, Filter } from "lucide-react";
+import { Loader2, DollarSign, CheckCircle2, Clock, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+interface ImplementationCommission {
+  id: string;
+  commission_name: string;
+  commission_value: number;
+}
 
 interface Implementation {
   id: string;
@@ -37,10 +43,16 @@ interface Implementation {
   commission_paid: boolean;
   commission_paid_at: string | null;
   implementer_id: string | null;
+  commissions: ImplementationCommission[];
 }
 
 interface Implementer {
   user_id: string;
+  name: string;
+}
+
+interface CommissionType {
+  id: string;
   name: string;
 }
 
@@ -53,6 +65,7 @@ const typeLabels: Record<string, string> = {
 export default function RelatorioComissoes() {
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [implementers, setImplementers] = useState<Implementer[]>([]);
+  const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const { toast } = useToast();
@@ -62,15 +75,17 @@ export default function RelatorioComissoes() {
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [selectedImplementer, setSelectedImplementer] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const [selectedCommissionType, setSelectedCommissionType] = useState<string>("all");
   const [showOnlyPending, setShowOnlyPending] = useState(false);
 
   useEffect(() => {
     fetchImplementers();
+    fetchCommissionTypes();
   }, []);
 
   useEffect(() => {
     fetchImplementations();
-  }, [startDate, endDate, selectedImplementer, selectedType, showOnlyPending]);
+  }, [startDate, endDate, selectedImplementer, selectedType, selectedCommissionType, showOnlyPending]);
 
   const fetchImplementers = async () => {
     try {
@@ -95,6 +110,21 @@ export default function RelatorioComissoes() {
     }
   };
 
+  const fetchCommissionTypes = async () => {
+    try {
+      const { data } = await supabase
+        .from("commission_types")
+        .select("id, name")
+        .order("name");
+
+      if (data) {
+        setCommissionTypes(data);
+      }
+    } catch (error) {
+      console.error("Error fetching commission types:", error);
+    }
+  };
+
   const fetchImplementations = async () => {
     setLoading(true);
     try {
@@ -102,7 +132,6 @@ export default function RelatorioComissoes() {
         .from("implementations")
         .select("id, implementation_type, status, end_date, commission_value, commission_paid, commission_paid_at, implementer_id, client:clients(name)")
         .eq("status", "concluida")
-        .not("commission_value", "is", null)
         .gte("end_date", startDate)
         .lte("end_date", endDate + "T23:59:59")
         .order("end_date", { ascending: false });
@@ -123,12 +152,52 @@ export default function RelatorioComissoes() {
 
       if (error) throw error;
 
-      // Type assertion for the client relation
-      const typedData = (data || []).map(impl => ({
+      // Fetch commissions for each implementation
+      const implementationIds = (data || []).map((impl) => impl.id);
+      
+      let commissionsMap: Record<string, ImplementationCommission[]> = {};
+      
+      if (implementationIds.length > 0) {
+        const { data: commissionsData } = await supabase
+          .from("implementation_commissions")
+          .select("id, implementation_id, commission_name, commission_value")
+          .in("implementation_id", implementationIds);
+
+        if (commissionsData) {
+          commissionsData.forEach((comm: any) => {
+            if (!commissionsMap[comm.implementation_id]) {
+              commissionsMap[comm.implementation_id] = [];
+            }
+            commissionsMap[comm.implementation_id].push({
+              id: comm.id,
+              commission_name: comm.commission_name,
+              commission_value: Number(comm.commission_value),
+            });
+          });
+        }
+      }
+
+      // Type assertion and merge commissions
+      let typedData = (data || []).map((impl) => ({
         ...impl,
         client: impl.client as { name: string },
-        implementation_type: impl.implementation_type as "web" | "manager" | "basic" | null
+        implementation_type: impl.implementation_type as "web" | "manager" | "basic" | null,
+        commissions: commissionsMap[impl.id] || [],
       }));
+
+      // Filter by commission type if selected
+      if (selectedCommissionType !== "all") {
+        typedData = typedData.filter((impl) =>
+          impl.commissions.some((c) => c.commission_name === selectedCommissionType) ||
+          // Fallback: for legacy data without commissions table entries
+          (impl.commissions.length === 0 && impl.commission_value !== null)
+        );
+      }
+
+      // Filter out implementations with no commission at all
+      typedData = typedData.filter(
+        (impl) => impl.commissions.length > 0 || impl.commission_value !== null
+      );
 
       setImplementations(typedData);
     } catch (error) {
@@ -199,11 +268,22 @@ export default function RelatorioComissoes() {
     return impl?.name || "-";
   };
 
+  // Calculate total for an implementation (new system or legacy)
+  const getImplementationTotal = (impl: Implementation): number => {
+    if (impl.commissions.length > 0) {
+      return impl.commissions.reduce((acc, c) => acc + c.commission_value, 0);
+    }
+    return impl.commission_value || 0;
+  };
+
   // Summary calculations
-  const totalCommission = implementations.reduce((acc, impl) => acc + (impl.commission_value || 0), 0);
+  const totalCommission = implementations.reduce(
+    (acc, impl) => acc + getImplementationTotal(impl),
+    0
+  );
   const paidCommission = implementations
     .filter((impl) => impl.commission_paid)
-    .reduce((acc, impl) => acc + (impl.commission_value || 0), 0);
+    .reduce((acc, impl) => acc + getImplementationTotal(impl), 0);
   const pendingCommission = totalCommission - paidCommission;
 
   return (
@@ -225,7 +305,7 @@ export default function RelatorioComissoes() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
               <div className="space-y-2">
                 <Label>Data Inicial</Label>
                 <Input
@@ -269,6 +349,22 @@ export default function RelatorioComissoes() {
                     <SelectItem value="web">Web</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                     <SelectItem value="basic">Basic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de Comissão</Label>
+                <Select value={selectedCommissionType} onValueChange={setSelectedCommissionType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {commissionTypes.map((ct) => (
+                      <SelectItem key={ct.id} value={ct.name}>
+                        {ct.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -356,9 +452,9 @@ export default function RelatorioComissoes() {
                     <TableRow>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Implantador</TableHead>
-                      <TableHead>Tipo</TableHead>
+                      <TableHead>Comissões</TableHead>
                       <TableHead>Data Conclusão</TableHead>
-                      <TableHead className="text-right">Comissão</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-center">Ação</TableHead>
                     </TableRow>
@@ -371,17 +467,34 @@ export default function RelatorioComissoes() {
                         </TableCell>
                         <TableCell>{getImplementerName(impl.implementer_id)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {impl.implementation_type ? typeLabels[impl.implementation_type] : "-"}
-                          </Badge>
+                          {impl.commissions.length > 0 ? (
+                            <div className="space-y-1">
+                              {impl.commissions.map((c) => (
+                                <div key={c.id} className="flex items-center gap-2 text-sm">
+                                  <Badge variant="outline" className="text-xs">
+                                    {c.commission_name}
+                                  </Badge>
+                                  <span className="text-muted-foreground">
+                                    {formatCurrency(c.commission_value)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <Badge variant="outline">
+                              {impl.implementation_type
+                                ? typeLabels[impl.implementation_type]
+                                : "Legado"}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           {impl.end_date
                             ? format(new Date(impl.end_date), "dd/MM/yyyy", { locale: ptBR })
                             : "-"}
                         </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(impl.commission_value)}
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(getImplementationTotal(impl))}
                         </TableCell>
                         <TableCell className="text-center">
                           {impl.commission_paid ? (
