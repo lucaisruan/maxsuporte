@@ -17,6 +17,13 @@ interface Implementer {
   name: string;
 }
 
+interface CommissionType {
+  id: string;
+  name: string;
+  value: number;
+  is_active: boolean;
+}
+
 interface Client {
   id: string;
   name: string;
@@ -28,7 +35,7 @@ interface Implementation {
   id: string;
   client_id: string;
   implementer_id: string | null;
-  implementation_type: string | null;
+  commission_type_id: string | null;
   start_date: string;
   status: string;
   observations: string | null;
@@ -45,13 +52,15 @@ export default function EditarImplantacao() {
   const [clientName, setClientName] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [implementerId, setImplementerId] = useState("");
-  const [implementationType, setImplementationType] = useState<string>("");
+  const [commissionTypeId, setCommissionTypeId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [observations, setObservations] = useState("");
   const [implementers, setImplementers] = useState<Implementer[]>([]);
+  const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadingImplementers, setLoadingImplementers] = useState(true);
+  const [loadingCommissionTypes, setLoadingCommissionTypes] = useState(true);
 
   useEffect(() => {
     if (id) {
@@ -68,7 +77,7 @@ export default function EditarImplantacao() {
           id,
           client_id,
           implementer_id,
-          implementation_type,
+          commission_type_id,
           start_date,
           status,
           observations,
@@ -88,10 +97,21 @@ export default function EditarImplantacao() {
         setClientName(typedData.client?.name || "");
         setCnpj(typedData.client?.cnpj || "");
         setImplementerId(typedData.implementer_id || "");
-        setImplementationType(typedData.implementation_type || "");
+        setCommissionTypeId(typedData.commission_type_id || "");
         setStartDate(typedData.start_date.split("T")[0]);
         setObservations(typedData.observations || "");
       }
+
+      // Fetch commission types (include inactive ones to show current selection)
+      const { data: ctData } = await supabase
+        .from("commission_types")
+        .select("id, name, value, is_active")
+        .order("name");
+
+      if (ctData) {
+        setCommissionTypes(ctData);
+      }
+      setLoadingCommissionTypes(false);
 
       // Fetch implementers
       const { data: roleData } = await supabase
@@ -136,11 +156,11 @@ export default function EditarImplantacao() {
       return;
     }
 
-    if (!implementationType) {
+    if (!commissionTypeId) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Selecione o tipo de implantação.",
+        description: "Selecione o modo de implantação.",
       });
       return;
     }
@@ -174,7 +194,7 @@ export default function EditarImplantacao() {
         .from("implementations")
         .update({
           implementer_id: implementerId,
-          implementation_type: implementationType as "web" | "manager" | "basic",
+          commission_type_id: commissionTypeId,
           start_date: new Date(startDate).toISOString(),
           status: newStatus as "agendada" | "em_andamento" | "pausada" | "concluida" | "cancelada",
           observations: observations || null,
@@ -268,17 +288,34 @@ export default function EditarImplantacao() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="implementationType">Tipo de Implantação *</Label>
-                  <Select value={implementationType} onValueChange={setImplementationType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="web">Web</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="basic">Basic</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="commissionType">Modo de Implantação *</Label>
+                  {loadingCommissionTypes ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando modos...
+                    </div>
+                  ) : (
+                    <Select value={commissionTypeId} onValueChange={setCommissionTypeId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o modo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {commissionTypes.length === 0 ? (
+                          <SelectItem value="" disabled>
+                            Nenhum modo de implantação
+                          </SelectItem>
+                        ) : (
+                          commissionTypes
+                            .filter(ct => ct.is_active || ct.id === commissionTypeId)
+                            .map((ct) => (
+                              <SelectItem key={ct.id} value={ct.id}>
+                                {ct.name} {!ct.is_active && "(Inativo)"}
+                              </SelectItem>
+                            ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div className="space-y-2">

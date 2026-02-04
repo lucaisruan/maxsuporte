@@ -43,12 +43,13 @@ interface Episode {
 interface Implementation {
   id: string;
   status: string;
-  implementation_type: string | null;
+  commission_type_id: string | null;
   start_date: string;
   end_date: string | null;
   total_time_minutes: number;
   observations: string | null;
   client: { name: string; cnpj: string | null } | null;
+  commission_type: { name: string } | null;
 }
 
 export default function ImplantacaoDetalhe() {
@@ -96,12 +97,13 @@ export default function ImplantacaoDetalhe() {
         .select(`
           id,
           status,
-          implementation_type,
+          commission_type_id,
           start_date,
           end_date,
           total_time_minutes,
           observations,
-          client:clients(name, cnpj)
+          client:clients(name, cnpj),
+          commission_type:commission_types(name)
         `)
         .eq("id", id)
         .single();
@@ -305,14 +307,8 @@ export default function ImplantacaoDetalhe() {
     timer.resetTimer();
   };
 
-  const getImplementationTypeLabel = (type: string | null) => {
-    if (!type) return null;
-    const labels: Record<string, string> = {
-      web: "Web",
-      manager: "Manager",
-      basic: "Basic",
-    };
-    return labels[type] || type;
+  const getImplementationTypeLabel = () => {
+    return implementation?.commission_type?.name || null;
   };
 
   const generateReport = () => {
@@ -320,7 +316,7 @@ export default function ImplantacaoDetalhe() {
 
     const completedItems = checklistItems.filter((i) => i.is_completed);
     const pendingItems = checklistItems.filter((i) => !i.is_completed);
-    const implType = getImplementationTypeLabel(implementation.implementation_type);
+    const implType = getImplementationTypeLabel();
 
     const report = `
 ═══════════════════════════════════════════════
@@ -541,7 +537,7 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
   }
 
   const isImplantador = role === "implantador";
-  const implType = getImplementationTypeLabel(implementation.implementation_type);
+  const implType = getImplementationTypeLabel();
 
   return (
     <DashboardLayout>

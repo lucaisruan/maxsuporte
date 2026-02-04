@@ -1,6 +1,40 @@
 
 # Plano de Evolução do Módulo de Comissões
 
+## Status: ✅ Implementado
+
+## Conceito Unificado
+
+O sistema agora trata **Modo de Implantação** e **Comissão** como uma **única entidade conceitual**:
+
+- Ao cadastrar um modo de implantação, o admin define o nome e a comissão associada
+- No cadastro de implantação, o campo "Modo de Implantação" lista automaticamente os modos ativos
+- O sistema deriva automaticamente o modo de implantação a partir da comissão cadastrada
+
+---
+
+## Alterações Realizadas
+
+### Banco de Dados
+- Campo `commission_type_id` adicionado à tabela `implementations`
+- Dados migrados automaticamente do antigo `implementation_type` (ENUM) para o novo modelo
+- Retrocompatibilidade com implantações existentes mantida
+
+### Formulários Atualizados
+- `NovaImplantacao.tsx`: Campo "Modo de Implantação" agora busca da tabela `commission_types`
+- `EditarImplantacao.tsx`: Mesmo comportamento, exibe modos inativos se já selecionados
+- `ImplantacaoDetalhe.tsx`: Exibe nome do modo de implantação ao invés do ENUM
+
+### Listagens
+- `ImplantacoesAdmin.tsx`: Coluna "Modo" adicionada exibindo o nome do modo de implantação
+
+### Tela de Configuração
+- `ConfiguracaoComissoes.tsx`: Renomeada para "Modos de Implantação"
+- Terminologia atualizada para refletir o conceito unificado
+
+### Relatórios
+- `RelatorioComissoes.tsx`: Mantém retrocompatibilidade com dados antigos
+
 ## Visão Geral
 
 Este plano descreve as alterações necessárias para permitir a criação de tipos de comissão customizáveis, mantendo compatibilidade com o sistema atual de comissões por tipo de implantação.

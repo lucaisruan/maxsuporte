@@ -35,6 +35,7 @@ interface Implementation {
   total_time_minutes: number;
   client: { name: string } | null;
   implementer: { name: string } | null;
+  commission_type: { name: string } | null;
   checklist_items: { is_completed: boolean }[];
 }
 
@@ -59,6 +60,7 @@ export default function ImplantacoesAdmin() {
           total_time_minutes,
           implementer_id,
           client:clients(name),
+          commission_type:commission_types(name),
           checklist_items(is_completed)
         `)
         .order("created_at", { ascending: false });
@@ -177,6 +179,7 @@ export default function ImplantacoesAdmin() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Cliente</TableHead>
+                      <TableHead>Modo</TableHead>
                       <TableHead>Implantador</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Progresso</TableHead>
@@ -192,6 +195,9 @@ export default function ImplantacoesAdmin() {
                         <TableRow key={impl.id}>
                           <TableCell className="font-medium">
                             {impl.client?.name || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {impl.commission_type?.name || "-"}
                           </TableCell>
                           <TableCell>{impl.implementer?.name || "Não atribuído"}</TableCell>
                           <TableCell>{getStatusBadge(impl.status)}</TableCell>
