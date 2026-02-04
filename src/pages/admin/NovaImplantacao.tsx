@@ -17,22 +17,32 @@ interface Implementer {
   name: string;
 }
 
+interface CommissionType {
+  id: string;
+  name: string;
+  value: number;
+  is_active: boolean;
+}
+
 export default function NovaImplantacao() {
   const [clientName, setClientName] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [implementerId, setImplementerId] = useState("");
-  const [implementationType, setImplementationType] = useState<string>("");
+  const [commissionTypeId, setCommissionTypeId] = useState<string>("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [observations, setObservations] = useState("");
   const [implementers, setImplementers] = useState<Implementer[]>([]);
+  const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingImplementers, setLoadingImplementers] = useState(true);
+  const [loadingCommissionTypes, setLoadingCommissionTypes] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
     fetchImplementers();
+    fetchCommissionTypes();
   }, []);
 
   const fetchImplementers = async () => {
@@ -62,6 +72,24 @@ export default function NovaImplantacao() {
     }
   };
 
+  const fetchCommissionTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("commission_types")
+        .select("id, name, value, is_active")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+
+      setCommissionTypes(data || []);
+    } catch (error) {
+      console.error("Error fetching commission types:", error);
+    } finally {
+      setLoadingCommissionTypes(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -74,14 +102,16 @@ export default function NovaImplantacao() {
       return;
     }
 
-    if (!implementationType) {
+    if (!commissionTypeId) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Selecione o tipo de implantação.",
+        description: "Selecione o modo de implantação.",
       });
       return;
     }
+
+    const selectedCommissionType = commissionTypes.find(ct => ct.id === commissionTypeId);
 
     if (!startDate) {
       toast({
@@ -114,13 +144,13 @@ export default function NovaImplantacao() {
       const isScheduled = startDate > today;
       const status = isScheduled ? "agendada" : "em_andamento";
 
-      // Create implementation
+      // Create implementation with commission_type_id
       const { data: implData, error: implError } = await supabase
         .from("implementations")
         .insert({
           client_id: clientData.id,
           implementer_id: implementerId,
-          implementation_type: implementationType as "web" | "manager" | "basic",
+          commission_type_id: commissionTypeId,
           start_date: new Date(startDate).toISOString(),
           actual_start_date: isScheduled ? null : new Date().toISOString(),
           status: status as "agendada" | "em_andamento",
@@ -173,13 +203,11 @@ export default function NovaImplantacao() {
     }
   };
 
-  const getImplementationTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      web: "Web",
-      manager: "Manager",
-      basic: "Basic",
-    };
-    return labels[type] || type;
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
   };
 
   return (
@@ -227,17 +255,32 @@ export default function NovaImplantacao() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="implementationType">Tipo de Implantação *</Label>
-                  <Select value={implementationType} onValueChange={setImplementationType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="web">Web</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="basic">Basic</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="commissionType">Modo de Implantação *</Label>
+                  {loadingCommissionTypes ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando modos...
+                    </div>
+                  ) : (
+                    <Select value={commissionTypeId} onValueChange={setCommissionTypeId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o modo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {commissionTypes.length === 0 ? (
+                          <SelectItem value="" disabled>
+                            Nenhum modo de implantação cadastrado
+                          </SelectItem>
+                        ) : (
+                          commissionTypes.map((ct) => (
+                            <SelectItem key={ct.id} value={ct.id}>
+                              {ct.name} ({formatCurrency(ct.value)})
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div className="space-y-2">

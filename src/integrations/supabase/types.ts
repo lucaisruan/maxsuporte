@@ -271,6 +271,7 @@ export type Database = {
           client_id: string
           commission_paid: boolean
           commission_paid_at: string | null
+          commission_type_id: string | null
           commission_value: number | null
           created_at: string
           created_by: string | null
@@ -291,6 +292,7 @@ export type Database = {
           client_id: string
           commission_paid?: boolean
           commission_paid_at?: string | null
+          commission_type_id?: string | null
           commission_value?: number | null
           created_at?: string
           created_by?: string | null
@@ -311,6 +313,7 @@ export type Database = {
           client_id?: string
           commission_paid?: boolean
           commission_paid_at?: string | null
+          commission_type_id?: string | null
           commission_value?: number | null
           created_at?: string
           created_by?: string | null
@@ -332,6 +335,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "implementations_commission_type_id_fkey"
+            columns: ["commission_type_id"]
+            isOneToOne: false
+            referencedRelation: "commission_types"
             referencedColumns: ["id"]
           },
         ]

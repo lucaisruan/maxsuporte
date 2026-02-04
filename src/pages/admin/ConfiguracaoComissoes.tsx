@@ -49,7 +49,7 @@ export default function ConfiguracaoComissoes() {
       console.error("Error fetching commission types:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os tipos de comissão.",
+        description: "Não foi possível carregar os modos de implantação.",
         variant: "destructive",
       });
     } finally {
@@ -81,7 +81,7 @@ export default function ConfiguracaoComissoes() {
 
         toast({
           title: "Sucesso",
-          description: "Tipo de comissão atualizado.",
+          description: "Modo de implantação atualizado.",
         });
       } else {
         // Create new
@@ -93,15 +93,15 @@ export default function ConfiguracaoComissoes() {
         });
 
         if (error) {
-          if (error.code === "23505") {
-            throw new Error("Já existe um tipo de comissão com este nome.");
+        if (error.code === "23505") {
+            throw new Error("Já existe um modo de implantação com este nome.");
           }
           throw error;
         }
 
         toast({
           title: "Sucesso",
-          description: "Tipo de comissão criado.",
+          description: "Modo de implantação criado.",
         });
       }
 
@@ -112,7 +112,7 @@ export default function ConfiguracaoComissoes() {
       console.error("Error saving commission type:", error);
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível salvar o tipo de comissão.",
+        description: error.message || "Não foi possível salvar o modo de implantação.",
         variant: "destructive",
       });
     } finally {
@@ -153,23 +153,24 @@ export default function ConfiguracaoComissoes() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Configuração de Comissões
+              Modos de Implantação
             </h1>
             <p className="text-muted-foreground">
-              Gerencie os tipos de comissão disponíveis
+              Gerencie os modos de implantação e suas comissões
             </p>
           </div>
           <Button onClick={handleNew}>
             <Plus className="mr-2 h-4 w-4" />
-            Novo Tipo de Comissão
+            Novo Modo de Implantação
           </Button>
         </div>
 
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Os valores são salvos no momento da vinculação à implantação. Alterações
-            futuras <strong>não afetam</strong> comissões já registradas.
+            Cada modo de implantação tem uma comissão associada. Os valores são salvos
+            no momento da conclusão da implantação. Alterações futuras{" "}
+            <strong>não afetam</strong> implantações já concluídas.
           </AlertDescription>
         </Alert>
 
@@ -177,25 +178,25 @@ export default function ConfiguracaoComissoes() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
-              Tipos de Comissão
+              Modos de Implantação
             </CardTitle>
             <CardDescription>
-              Crie e gerencie tipos de comissão customizados
+              Cada modo representa um tipo de implantação com sua comissão associada
             </CardDescription>
           </CardHeader>
           <CardContent>
             {commissionTypes.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
-                Nenhum tipo de comissão cadastrado.
+                Nenhum modo de implantação cadastrado.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
+                      <TableHead>Modo de Implantação</TableHead>
                       <TableHead>Descrição</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="text-right">Comissão</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
                     </TableRow>

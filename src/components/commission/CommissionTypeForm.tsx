@@ -75,28 +75,28 @@ export function CommissionTypeForm({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Editar Tipo de Comissão" : "Novo Tipo de Comissão"}
+            {isEditing ? "Editar Modo de Implantação" : "Novo Modo de Implantação"}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Altere os dados do tipo de comissão"
-              : "Crie um novo tipo de comissão customizado"}
+              ? "Altere os dados do modo de implantação"
+              : "Crie um novo modo de implantação com sua comissão"}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome *</Label>
+            <Label htmlFor="name">Nome do Modo *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Treinamento Extra"
+              placeholder="Ex: Implantação Premium"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="value">Valor (R$) *</Label>
+            <Label htmlFor="value">Comissão (R$) *</Label>
             <Input
               id="value"
               type="number"
@@ -116,7 +116,7 @@ export function CommissionTypeForm({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição opcional do tipo de comissão..."
+              placeholder="Descrição opcional do modo de implantação..."
               rows={3}
             />
           </div>
@@ -125,7 +125,7 @@ export function CommissionTypeForm({
             <div className="space-y-0.5">
               <Label htmlFor="is_active">Status</Label>
               <p className="text-xs text-muted-foreground">
-                Tipos inativos não aparecem na seleção
+                Modos inativos não aparecem para novas implantações
               </p>
             </div>
             <Switch
