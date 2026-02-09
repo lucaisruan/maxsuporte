@@ -69,8 +69,7 @@ export function Sidebar({
         <nav className="flex-1 space-y-1 p-4">
           {links.map(link => {
           const isActive = location.pathname === link.to;
-          return <NavLink key={link.to} to={link.to} onClick={onClose} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors", isActive ? "bg-sidebar-primary text-sidebar-primary-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground")}>Relatórios
-            <link.icon className="h-5 w-5" />
+          return <NavLink key={link.to} to={link.to} onClick={onClose} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors", isActive ? "bg-sidebar-primary text-sidebar-primary-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground")}>Rel. Comissões<link.icon className="h-5 w-5" />
                 {link.label}
               </NavLink>;
         })}
