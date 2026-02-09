@@ -17,6 +17,7 @@ import { useTimer } from "@/hooks/useTimer";
 import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer } from "lucide-react";
 import { ChecklistItemCard } from "@/components/checklist/ChecklistItemCard";
 import { CommissionSelectionModal } from "@/components/commission/CommissionSelectionModal";
+import { NegotiatedTimeCard } from "@/components/implementation/NegotiatedTimeCard";
 
 interface ChecklistItem {
   id: string;
@@ -47,6 +48,7 @@ interface Implementation {
   start_date: string;
   end_date: string | null;
   total_time_minutes: number;
+  negotiated_time_minutes: number | null;
   observations: string | null;
   client: { name: string; cnpj: string | null } | null;
   commission_type: { name: string } | null;
@@ -101,6 +103,7 @@ export default function ImplantacaoDetalhe() {
           start_date,
           end_date,
           total_time_minutes,
+          negotiated_time_minutes,
           observations,
           client:clients(name, cnpj),
           commission_type:commission_types(name)
@@ -595,6 +598,27 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
             </Button>
           </div>
         </div>
+
+        {/* Negotiated Time Card */}
+        {implementation.negotiated_time_minutes && implementation.negotiated_time_minutes > 0 && (() => {
+          // Calculate migration time to exclude
+          const migrationChecklistTime = checklistItems
+            .filter(item => item.title.toLowerCase().includes("migração"))
+            .reduce((acc, item) => acc + (item.time_spent_minutes || 0), 0);
+          const migrationEpisodeTime = episodes
+            .filter(ep => ep.episode_type === "migracao")
+            .reduce((acc, ep) => acc + (ep.time_spent_minutes || 0), 0);
+          const migrationMinutes = migrationChecklistTime + migrationEpisodeTime;
+
+          return (
+            <NegotiatedTimeCard
+              negotiatedMinutes={implementation.negotiated_time_minutes}
+              usedMinutes={implementation.total_time_minutes}
+              migrationMinutes={migrationMinutes}
+              showAlerts={isImplantador}
+            />
+          );
+        })()}
 
         {/* Progress Overview */}
         <Card>

@@ -281,6 +281,7 @@ export type Database = {
             | Database["public"]["Enums"]["implementation_type"]
             | null
           implementer_id: string | null
+          negotiated_time_minutes: number | null
           observations: string | null
           start_date: string
           status: Database["public"]["Enums"]["implementation_status"]
@@ -302,6 +303,7 @@ export type Database = {
             | Database["public"]["Enums"]["implementation_type"]
             | null
           implementer_id?: string | null
+          negotiated_time_minutes?: number | null
           observations?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["implementation_status"]
@@ -323,6 +325,7 @@ export type Database = {
             | Database["public"]["Enums"]["implementation_type"]
             | null
           implementer_id?: string | null
+          negotiated_time_minutes?: number | null
           observations?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["implementation_status"]

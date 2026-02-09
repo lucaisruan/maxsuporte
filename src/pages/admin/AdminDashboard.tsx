@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { NegotiatedTimeBadge } from "@/components/implementation/NegotiatedTimeCard";
 import { 
   ClipboardList, 
   Users, 
@@ -22,6 +23,7 @@ interface Implementation {
   implementation_type: string | null;
   start_date: string;
   total_time_minutes: number;
+  negotiated_time_minutes: number | null;
   client: { name: string } | null;
   implementer: { name: string } | null;
   checklist_items: { is_completed: boolean }[];
@@ -61,6 +63,7 @@ export default function AdminDashboard() {
           implementation_type,
           start_date,
           total_time_minutes,
+          negotiated_time_minutes,
           implementer_id,
           client:clients(name),
           checklist_items(is_completed)
@@ -290,6 +293,12 @@ export default function AdminDashboard() {
                       <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
                         <span>Tempo: {formatTime(impl.total_time_minutes)}</span>
                         <span>Início: {new Date(impl.start_date).toLocaleDateString("pt-BR")}</span>
+                        {impl.negotiated_time_minutes && impl.negotiated_time_minutes > 0 && (
+                          <NegotiatedTimeBadge
+                            negotiatedMinutes={impl.negotiated_time_minutes}
+                            usedMinutes={impl.total_time_minutes}
+                          />
+                        )}
                       </div>
                     </Link>
                   );

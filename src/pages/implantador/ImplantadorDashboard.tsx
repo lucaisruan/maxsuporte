@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ClipboardList, Clock, Loader2 } from "lucide-react";
+import { NegotiatedTimeBadge } from "@/components/implementation/NegotiatedTimeCard";
 
 interface Implementation {
   id: string;
@@ -14,6 +15,7 @@ interface Implementation {
   implementation_type: string | null;
   start_date: string;
   total_time_minutes: number;
+  negotiated_time_minutes: number | null;
   client: { name: string } | null;
   checklist_items: { is_completed: boolean }[];
 }
@@ -41,6 +43,7 @@ export default function ImplantadorDashboard() {
           implementation_type,
           start_date,
           total_time_minutes,
+          negotiated_time_minutes,
           client:clients(name),
           checklist_items(is_completed)
         `)
@@ -194,8 +197,14 @@ export default function ImplantadorDashboard() {
                         </div>
                         <Progress value={progress} className="h-2" />
                       </div>
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        Tempo total: {formatTime(impl.total_time_minutes)}
+                      <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>Tempo total: {formatTime(impl.total_time_minutes)}</span>
+                        {impl.negotiated_time_minutes && impl.negotiated_time_minutes > 0 && (
+                          <NegotiatedTimeBadge
+                            negotiatedMinutes={impl.negotiated_time_minutes}
+                            usedMinutes={impl.total_time_minutes}
+                          />
+                        )}
                       </div>
                     </Link>
                   );
