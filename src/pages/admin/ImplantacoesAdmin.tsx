@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { NegotiatedTimeBadge } from "@/components/implementation/NegotiatedTimeCard";
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ interface Implementation {
   status: string;
   start_date: string;
   total_time_minutes: number;
+  negotiated_time_minutes: number | null;
   client: { name: string } | null;
   implementer: { name: string } | null;
   commission_type: { name: string } | null;
@@ -58,6 +60,7 @@ export default function ImplantacoesAdmin() {
           status,
           start_date,
           total_time_minutes,
+          negotiated_time_minutes,
           implementer_id,
           client:clients(name),
           commission_type:commission_types(name),
@@ -207,7 +210,17 @@ export default function ImplantacoesAdmin() {
                               <span className="text-sm">{progress}%</span>
                             </div>
                           </TableCell>
-                          <TableCell>{formatTime(impl.total_time_minutes)}</TableCell>
+                          <TableCell>
+                            {formatTime(impl.total_time_minutes)}
+                            {impl.negotiated_time_minutes && impl.negotiated_time_minutes > 0 && (
+                              <div className="mt-1">
+                                <NegotiatedTimeBadge
+                                  negotiatedMinutes={impl.negotiated_time_minutes}
+                                  usedMinutes={impl.total_time_minutes}
+                                />
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell>
                             {new Date(impl.start_date).toLocaleDateString("pt-BR")}
                           </TableCell>

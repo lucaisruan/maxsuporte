@@ -30,6 +30,8 @@ export default function NovaImplantacao() {
   const [implementerId, setImplementerId] = useState("");
   const [commissionTypeId, setCommissionTypeId] = useState<string>("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [negotiatedHours, setNegotiatedHours] = useState("");
+  const [negotiatedMinutesField, setNegotiatedMinutesField] = useState("");
   const [observations, setObservations] = useState("");
   const [implementers, setImplementers] = useState<Implementer[]>([]);
   const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
@@ -122,6 +124,16 @@ export default function NovaImplantacao() {
       return;
     }
 
+    const totalNegotiatedMinutes = (parseInt(negotiatedHours || "0") * 60) + parseInt(negotiatedMinutesField || "0");
+    if (totalNegotiatedMinutes < 30) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "O tempo negociado deve ser de no mínimo 30 minutos.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -154,6 +166,7 @@ export default function NovaImplantacao() {
           start_date: new Date(startDate).toISOString(),
           actual_start_date: isScheduled ? null : new Date().toISOString(),
           status: status as "agendada" | "em_andamento",
+          negotiated_time_minutes: totalNegotiatedMinutes,
           observations,
           created_by: user?.id,
         })
@@ -296,6 +309,39 @@ export default function NovaImplantacao() {
                     Datas futuras criam implantações agendadas. Datas passadas iniciam como "Em andamento".
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tempo de Implantação Negociado *</Label>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="999"
+                      placeholder="0"
+                      value={negotiatedHours}
+                      onChange={(e) => setNegotiatedHours(e.target.value)}
+                      className="w-20"
+                    />
+                    <span className="text-sm text-muted-foreground">h</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="0"
+                      value={negotiatedMinutesField}
+                      onChange={(e) => setNegotiatedMinutesField(e.target.value)}
+                      className="w-20"
+                    />
+                    <span className="text-sm text-muted-foreground">min</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Mínimo: 30 minutos. Tempo de migração de dados não é contabilizado.
+                </p>
               </div>
 
               <div className="space-y-2">

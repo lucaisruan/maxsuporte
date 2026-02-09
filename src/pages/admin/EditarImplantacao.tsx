@@ -39,6 +39,7 @@ interface Implementation {
   start_date: string;
   status: string;
   observations: string | null;
+  negotiated_time_minutes: number | null;
   client: Client;
 }
 
@@ -54,6 +55,8 @@ export default function EditarImplantacao() {
   const [implementerId, setImplementerId] = useState("");
   const [commissionTypeId, setCommissionTypeId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
+  const [negotiatedHours, setNegotiatedHours] = useState("");
+  const [negotiatedMinutesField, setNegotiatedMinutesField] = useState("");
   const [observations, setObservations] = useState("");
   const [implementers, setImplementers] = useState<Implementer[]>([]);
   const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
@@ -81,6 +84,7 @@ export default function EditarImplantacao() {
           start_date,
           status,
           observations,
+          negotiated_time_minutes,
           client:clients(id, name, cnpj, observations)
         `)
         .eq("id", id)
@@ -99,6 +103,9 @@ export default function EditarImplantacao() {
         setImplementerId(typedData.implementer_id || "");
         setCommissionTypeId(typedData.commission_type_id || "");
         setStartDate(typedData.start_date.split("T")[0]);
+        const negMin = typedData.negotiated_time_minutes || 0;
+        setNegotiatedHours(String(Math.floor(negMin / 60)));
+        setNegotiatedMinutesField(String(negMin % 60));
         setObservations(typedData.observations || "");
       }
 
@@ -165,6 +172,26 @@ export default function EditarImplantacao() {
       return;
     }
 
+    const totalNegotiatedMinutes = (parseInt(negotiatedHours || "0") * 60) + parseInt(negotiatedMinutesField || "0");
+    if (totalNegotiatedMinutes < 30) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "O tempo negociado deve ser de no mínimo 30 minutos.",
+      });
+      return;
+    }
+
+    const isConcluded = implementation?.status === "concluida";
+    if (isConcluded && totalNegotiatedMinutes !== (implementation?.negotiated_time_minutes || 0)) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não é possível alterar o tempo negociado de implantações concluídas.",
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -197,6 +224,7 @@ export default function EditarImplantacao() {
           commission_type_id: commissionTypeId,
           start_date: new Date(startDate).toISOString(),
           status: newStatus as "agendada" | "em_andamento" | "pausada" | "concluida" | "cancelada",
+          negotiated_time_minutes: totalNegotiatedMinutes,
           observations: observations || null,
         })
         .eq("id", id);
@@ -357,6 +385,43 @@ export default function EditarImplantacao() {
                     </SelectContent>
                   </Select>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tempo de Implantação Negociado *</Label>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="999"
+                      placeholder="0"
+                      value={negotiatedHours}
+                      onChange={(e) => setNegotiatedHours(e.target.value)}
+                      className="w-20"
+                      disabled={implementation?.status === "concluida"}
+                    />
+                    <span className="text-sm text-muted-foreground">h</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="0"
+                      value={negotiatedMinutesField}
+                      onChange={(e) => setNegotiatedMinutesField(e.target.value)}
+                      className="w-20"
+                      disabled={implementation?.status === "concluida"}
+                    />
+                    <span className="text-sm text-muted-foreground">min</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {implementation?.status === "concluida"
+                    ? "Não é possível alterar o tempo negociado de implantações concluídas."
+                    : "Mínimo: 30 minutos. Tempo de migração de dados não é contabilizado."}
+                </p>
               </div>
 
               <div className="space-y-2">
