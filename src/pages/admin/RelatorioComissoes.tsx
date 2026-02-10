@@ -51,10 +51,6 @@ interface Implementer {
   name: string;
 }
 
-interface CommissionType {
-  id: string;
-  name: string;
-}
 
 const typeLabels: Record<string, string> = {
   web: "Web",
@@ -65,7 +61,7 @@ const typeLabels: Record<string, string> = {
 export default function RelatorioComissoes() {
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [implementers, setImplementers] = useState<Implementer[]>([]);
-  const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const { toast } = useToast();
@@ -75,17 +71,16 @@ export default function RelatorioComissoes() {
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [selectedImplementer, setSelectedImplementer] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
-  const [selectedCommissionType, setSelectedCommissionType] = useState<string>("all");
+  
   const [showOnlyPending, setShowOnlyPending] = useState(false);
 
   useEffect(() => {
     fetchImplementers();
-    fetchCommissionTypes();
   }, []);
 
   useEffect(() => {
     fetchImplementations();
-  }, [startDate, endDate, selectedImplementer, selectedType, selectedCommissionType, showOnlyPending]);
+  }, [startDate, endDate, selectedImplementer, selectedType, showOnlyPending]);
 
   const fetchImplementers = async () => {
     try {
@@ -110,20 +105,6 @@ export default function RelatorioComissoes() {
     }
   };
 
-  const fetchCommissionTypes = async () => {
-    try {
-      const { data } = await supabase
-        .from("commission_types")
-        .select("id, name")
-        .order("name");
-
-      if (data) {
-        setCommissionTypes(data);
-      }
-    } catch (error) {
-      console.error("Error fetching commission types:", error);
-    }
-  };
 
   const fetchImplementations = async () => {
     setLoading(true);
@@ -184,15 +165,6 @@ export default function RelatorioComissoes() {
         implementation_type: impl.implementation_type as "web" | "manager" | "basic" | null,
         commissions: commissionsMap[impl.id] || [],
       }));
-
-      // Filter by commission type if selected
-      if (selectedCommissionType !== "all") {
-        typedData = typedData.filter((impl) =>
-          impl.commissions.some((c) => c.commission_name === selectedCommissionType) ||
-          // Fallback: for legacy data without commissions table entries
-          (impl.commissions.length === 0 && impl.commission_value !== null)
-        );
-      }
 
       // Filter out implementations with no commission at all
       typedData = typedData.filter(
@@ -305,7 +277,7 @@ export default function RelatorioComissoes() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
               <div className="space-y-2">
                 <Label>Data Inicial</Label>
                 <Input
@@ -349,22 +321,6 @@ export default function RelatorioComissoes() {
                     <SelectItem value="web">Web</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                     <SelectItem value="basic">Basic</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de Comissão</Label>
-                <Select value={selectedCommissionType} onValueChange={setSelectedCommissionType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {commissionTypes.map((ct) => (
-                      <SelectItem key={ct.id} value={ct.name}>
-                        {ct.name}
-                      </SelectItem>
-                    ))}
                   </SelectContent>
                 </Select>
               </div>
