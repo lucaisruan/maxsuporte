@@ -27,6 +27,11 @@ import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface CommissionType {
+  id: string;
+  name: string;
+}
+
 interface ImplementationCommission {
   id: string;
   commission_name: string;
@@ -61,6 +66,7 @@ const typeLabels: Record<string, string> = {
 export default function RelatorioComissoes() {
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [implementers, setImplementers] = useState<Implementer[]>([]);
+  const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -76,6 +82,7 @@ export default function RelatorioComissoes() {
 
   useEffect(() => {
     fetchImplementers();
+    fetchCommissionTypes();
   }, []);
 
   useEffect(() => {
@@ -105,6 +112,18 @@ export default function RelatorioComissoes() {
     }
   };
 
+  const fetchCommissionTypes = async () => {
+    try {
+      const { data } = await supabase
+        .from("commission_types")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (data) setCommissionTypes(data);
+    } catch (error) {
+      console.error("Error fetching commission types:", error);
+    }
+  };
 
   const fetchImplementations = async () => {
     setLoading(true);
@@ -122,7 +141,7 @@ export default function RelatorioComissoes() {
       }
 
       if (selectedType !== "all") {
-        query = query.eq("implementation_type", selectedType as "web" | "manager" | "basic");
+        query = query.eq("commission_type_id", selectedType);
       }
 
       if (showOnlyPending) {
@@ -311,16 +330,18 @@ export default function RelatorioComissoes() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Tipo de Implantação</Label>
+                <Label>Modo de Implantação</Label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="web">Web</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
+                    {commissionTypes.map((ct) => (
+                      <SelectItem key={ct.id} value={ct.id}>
+                        {ct.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
