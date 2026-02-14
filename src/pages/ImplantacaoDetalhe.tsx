@@ -148,8 +148,6 @@ export default function ImplantacaoDetalhe() {
     field: "is_completed" | "time_spent_minutes" | "observations",
     value: boolean | number | string
   ) => {
-    if (role === "admin") return; // Admin can only view
-
     setSavingItem(itemId);
 
     try {
@@ -181,7 +179,7 @@ export default function ImplantacaoDetalhe() {
     } finally {
       setSavingItem(null);
     }
-  }, [role, id, toast]);
+  }, [id, toast]);
 
   // Recalculates total time by fetching fresh data from database
   const recalculateTotalTimeFromDB = useCallback(async () => {
@@ -539,7 +537,7 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
     );
   }
 
-  const isImplantador = role === "implantador";
+  const canOperate = role === "implantador" || role === "admin";
   const implType = getImplementationTypeLabel();
 
   return (
@@ -615,7 +613,7 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
               negotiatedMinutes={implementation.negotiated_time_minutes}
               usedMinutes={implementation.total_time_minutes}
               migrationMinutes={migrationMinutes}
-              showAlerts={isImplantador}
+              showAlerts={canOperate}
             />
           );
         })()}
@@ -667,10 +665,8 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
         <Card>
           <CardHeader>
             <CardTitle>Checklist de Implantação</CardTitle>
-            <CardDescription>
-              {isImplantador
-                ? "Marque as etapas concluídas e informe o tempo gasto"
-                : "Visualize o progresso das etapas"}
+           <CardDescription>
+              Marque as etapas concluídas e informe o tempo gasto
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -679,7 +675,7 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
                 <ChecklistItemCard
                   key={item.id}
                   item={item}
-                  isImplantador={isImplantador}
+                  isImplantador={canOperate}
                   isSaving={savingItem === item.id}
                   onUpdate={handleChecklistUpdate}
                   formatTime={formatTime}
@@ -696,7 +692,7 @@ Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
               <CardTitle>Episódios</CardTitle>
               <CardDescription>Treinamentos, parametrizações e ajustes</CardDescription>
             </div>
-            {isImplantador && (
+            {canOperate && (
               <Dialog open={episodeDialogOpen} onOpenChange={(open) => {
                 setEpisodeDialogOpen(open);
                 if (!open) resetEpisodeForm();

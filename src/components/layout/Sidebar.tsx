@@ -24,6 +24,10 @@ export function Sidebar({
     icon: ClipboardList,
     label: "Implantações"
   }, {
+    to: "/admin/minhas-implantacoes",
+    icon: ClipboardList,
+    label: "Minhas Implantações"
+  }, {
     to: "/admin/usuarios",
     icon: Users,
     label: "Gestão de Usuários"

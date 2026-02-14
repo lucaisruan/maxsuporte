@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
@@ -52,7 +53,7 @@ export default function EditarImplantacao() {
   const [implementation, setImplementation] = useState<Implementation | null>(null);
   const [clientName, setClientName] = useState("");
   const [cnpj, setCnpj] = useState("");
-  const [implementerId, setImplementerId] = useState("");
+  const [selectedImplementerIds, setSelectedImplementerIds] = useState<string[]>([]);
   const [commissionTypeId, setCommissionTypeId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [negotiatedHours, setNegotiatedHours] = useState("");
@@ -100,7 +101,6 @@ export default function EditarImplantacao() {
         setImplementation(typedData);
         setClientName(typedData.client?.name || "");
         setCnpj(typedData.client?.cnpj || "");
-        setImplementerId(typedData.implementer_id || "");
         setCommissionTypeId(typedData.commission_type_id || "");
         setStartDate(typedData.start_date.split("T")[0]);
         const negMin = typedData.negotiated_time_minutes || 0;
@@ -109,7 +109,20 @@ export default function EditarImplantacao() {
         setObservations(typedData.observations || "");
       }
 
-      // Fetch commission types (include inactive ones to show current selection)
+      // Fetch existing analysts from pivot table
+      const { data: analystData } = await supabase
+        .from("implementation_analysts" as any)
+        .select("analyst_id")
+        .eq("implementation_id", id);
+
+      if (analystData && (analystData as any[]).length > 0) {
+        setSelectedImplementerIds((analystData as any[]).map((a: any) => a.analyst_id));
+      } else if (implData?.implementer_id) {
+        // Backward compat: use implementer_id if no pivot entries
+        setSelectedImplementerIds([implData.implementer_id]);
+      }
+
+      // Fetch commission types
       const { data: ctData } = await supabase
         .from("commission_types")
         .select("id, name, value, is_active")
@@ -120,23 +133,15 @@ export default function EditarImplantacao() {
       }
       setLoadingCommissionTypes(false);
 
-      // Fetch implementers
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "implantador");
+      // Fetch all active users as potential implementers
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, name, is_active")
+        .eq("is_active", true)
+        .order("name");
 
-      if (roleData && roleData.length > 0) {
-        const userIds = roleData.map((r) => r.user_id);
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("user_id, name, is_active")
-          .in("user_id", userIds)
-          .eq("is_active", true);
-
-        if (profilesData) {
-          setImplementers(profilesData);
-        }
+      if (profilesData) {
+        setImplementers(profilesData);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -151,14 +156,22 @@ export default function EditarImplantacao() {
     }
   };
 
+  const toggleImplementer = (userId: string) => {
+    setSelectedImplementerIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!implementerId) {
+    if (selectedImplementerIds.length === 0) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Selecione um implantador responsável.",
+        description: "Selecione ao menos um implantador responsável.",
       });
       return;
     }
@@ -210,7 +223,6 @@ export default function EditarImplantacao() {
       const today = new Date().toISOString().split("T")[0];
       const isScheduled = startDate > today;
       
-      // Only update status to agendada if it's currently agendada or em_andamento
       let newStatus = implementation?.status;
       if (implementation?.status === "agendada" || implementation?.status === "em_andamento") {
         newStatus = isScheduled ? "agendada" : "em_andamento";
@@ -220,7 +232,7 @@ export default function EditarImplantacao() {
       const { error: implError } = await supabase
         .from("implementations")
         .update({
-          implementer_id: implementerId,
+          implementer_id: selectedImplementerIds[0],
           commission_type_id: commissionTypeId,
           start_date: new Date(startDate).toISOString(),
           status: newStatus as "agendada" | "em_andamento" | "pausada" | "concluida" | "cancelada",
@@ -230,6 +242,23 @@ export default function EditarImplantacao() {
         .eq("id", id);
 
       if (implError) throw implError;
+
+      // Update pivot table: delete existing, insert new
+      await supabase
+        .from("implementation_analysts" as any)
+        .delete()
+        .eq("implementation_id", id);
+
+      const pivotEntries = selectedImplementerIds.map((analystId) => ({
+        implementation_id: id,
+        analyst_id: analystId,
+      }));
+
+      const { error: pivotError } = await supabase
+        .from("implementation_analysts" as any)
+        .insert(pivotEntries);
+
+      if (pivotError) throw pivotError;
 
       toast({
         title: "Implantação atualizada!",
@@ -288,7 +317,7 @@ export default function EditarImplantacao() {
           <CardHeader>
             <CardTitle>Dados da Implantação</CardTitle>
             <CardDescription>
-              Atualize os dados do cliente e do implantador responsável
+              Atualize os dados do cliente e dos implantadores responsáveis
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -359,31 +388,29 @@ export default function EditarImplantacao() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="implementer">Implantador Responsável *</Label>
+                <Label>Implantadores Responsáveis * ({selectedImplementerIds.length} selecionado{selectedImplementerIds.length !== 1 ? "s" : ""})</Label>
                 {loadingImplementers ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Carregando implantadores...
                   </div>
+                ) : implementers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum implantador ativo</p>
                 ) : (
-                  <Select value={implementerId} onValueChange={setImplementerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o implantador" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {implementers.length === 0 ? (
-                        <SelectItem value="" disabled>
-                          Nenhum implantador ativo
-                        </SelectItem>
-                      ) : (
-                        implementers.map((impl) => (
-                          <SelectItem key={impl.user_id} value={impl.user_id}>
-                            {impl.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border p-3">
+                    {implementers.map((impl) => (
+                      <div key={impl.user_id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`impl-edit-${impl.user_id}`}
+                          checked={selectedImplementerIds.includes(impl.user_id)}
+                          onCheckedChange={() => toggleImplementer(impl.user_id)}
+                        />
+                        <Label htmlFor={`impl-edit-${impl.user_id}`} className="cursor-pointer text-sm font-normal">
+                          {impl.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 

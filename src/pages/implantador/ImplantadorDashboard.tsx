@@ -23,7 +23,7 @@ interface Implementation {
 export default function ImplantadorDashboard() {
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, role } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -33,9 +33,16 @@ export default function ImplantadorDashboard() {
 
   const fetchImplementations = async () => {
     try {
-      // Fetch all implementations assigned to this implantador
-      // Including scheduled ones - they should see all their assigned work
-      const { data } = await supabase
+      // Get implementation IDs from pivot table
+      const { data: assignments } = await supabase
+        .from("implementation_analysts" as any)
+        .select("implementation_id")
+        .eq("analyst_id", user?.id);
+
+      const assignedIds = (assignments as any[] || []).map((a: any) => a.implementation_id);
+
+      // Build query - get implementations where user is assigned via pivot table or legacy implementer_id
+      let query = supabase
         .from("implementations")
         .select(`
           id,
@@ -47,11 +54,20 @@ export default function ImplantadorDashboard() {
           client:clients(name),
           checklist_items(is_completed)
         `)
-        .eq("implementer_id", user?.id)
         .order("created_at", { ascending: false });
 
+      if (assignedIds.length > 0) {
+        query = query.or(`implementer_id.eq.${user?.id},id.in.(${assignedIds.join(",")})`);
+      } else {
+        query = query.eq("implementer_id", user?.id);
+      }
+
+      const { data } = await query;
+
       if (data) {
-        setImplementations(data as Implementation[]);
+        // Deduplicate by id
+        const unique = Array.from(new Map((data as Implementation[]).map(i => [i.id, i])).values());
+        setImplementations(unique);
       }
     } catch (error) {
       console.error("Error fetching implementations:", error);
@@ -78,20 +94,6 @@ export default function ImplantadorDashboard() {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getImplementationTypeBadge = (type: string | null) => {
-    if (!type) return null;
-    const labels: Record<string, string> = {
-      web: "Web",
-      manager: "Manager",
-      basic: "Basic",
-    };
-    return (
-      <Badge variant="outline" className="text-xs">
-        {labels[type] || type}
-      </Badge>
-    );
-  };
-
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -103,6 +105,8 @@ export default function ImplantadorDashboard() {
     inProgress: implementations.filter((i) => i.status === "em_andamento").length,
     completed: implementations.filter((i) => i.status === "concluida").length,
   };
+
+  const basePath = role === "admin" ? "/admin" : "/implantador";
 
   if (loading) {
     return (
@@ -171,17 +175,14 @@ export default function ImplantadorDashboard() {
                   return (
                     <Link
                       key={impl.id}
-                      to={`/implantador/implantacoes/${impl.id}`}
+                      to={`${basePath}/implantacoes/${impl.id}`}
                       className="block rounded-lg border border-border p-4 transition-colors hover:bg-accent/50"
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-foreground">
-                              {impl.client?.name || "Cliente não definido"}
-                            </h3>
-                            {getImplementationTypeBadge(impl.implementation_type)}
-                          </div>
+                          <h3 className="font-medium text-foreground">
+                            {impl.client?.name || "Cliente não definido"}
+                          </h3>
                           <p className="text-sm text-muted-foreground">
                             Início: {new Date(impl.start_date).toLocaleDateString("pt-BR")}
                           </p>

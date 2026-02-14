@@ -220,6 +220,35 @@ export type Database = {
           },
         ]
       }
+      implementation_analysts: {
+        Row: {
+          analyst_id: string
+          created_at: string
+          id: string
+          implementation_id: string
+        }
+        Insert: {
+          analyst_id: string
+          created_at?: string
+          id?: string
+          implementation_id: string
+        }
+        Update: {
+          analyst_id?: string
+          created_at?: string
+          id?: string
+          implementation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "implementation_analysts_implementation_id_fkey"
+            columns: ["implementation_id"]
+            isOneToOne: false
+            referencedRelation: "implementations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       implementation_commissions: {
         Row: {
           commission_name: string

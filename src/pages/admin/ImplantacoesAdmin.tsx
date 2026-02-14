@@ -8,23 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { NegotiatedTimeBadge } from "@/components/implementation/NegotiatedTimeCard";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Plus, Loader2, Pencil, Trash2, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -36,7 +24,7 @@ interface Implementation {
   total_time_minutes: number;
   negotiated_time_minutes: number | null;
   client: { name: string } | null;
-  implementer: { name: string } | null;
+  analysts: string[];
   commission_type: { name: string } | null;
   checklist_items: { is_completed: boolean }[];
 }
@@ -71,19 +59,50 @@ export default function ImplantacoesAdmin() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const implementerIds = data.map(impl => impl.implementer_id).filter(Boolean);
+        const implIds = data.map(impl => impl.id);
+
+        // Fetch analysts from pivot table
+        const { data: pivotData } = await supabase
+          .from("implementation_analysts" as any)
+          .select("implementation_id, analyst_id")
+          .in("implementation_id", implIds);
+
+        // Get all unique analyst IDs
+        const allAnalystIds = new Set<string>();
+        (pivotData as any[] || []).forEach((p: any) => allAnalystIds.add(p.analyst_id));
+        // Also include legacy implementer_ids
+        data.forEach(impl => {
+          if (impl.implementer_id) allAnalystIds.add(impl.implementer_id);
+        });
+
+        // Fetch profiles
         const { data: profilesData } = await supabase
           .from("profiles")
           .select("user_id, name")
-          .in("user_id", implementerIds);
+          .in("user_id", Array.from(allAnalystIds));
 
         const profilesMap = new Map(profilesData?.map(p => [p.user_id, p.name]) || []);
-        
-        const implementationsWithNames = data.map(impl => ({
-          ...impl,
-          implementer: impl.implementer_id ? { name: profilesMap.get(impl.implementer_id) || "Não atribuído" } : null
-        }));
-        
+
+        // Build pivot map
+        const pivotMap = new Map<string, string[]>();
+        (pivotData as any[] || []).forEach((p: any) => {
+          const existing = pivotMap.get(p.implementation_id) || [];
+          const name = profilesMap.get(p.analyst_id);
+          if (name) existing.push(name);
+          pivotMap.set(p.implementation_id, existing);
+        });
+
+        const implementationsWithNames = data.map(impl => {
+          const pivotNames = pivotMap.get(impl.id);
+          const analysts = pivotNames && pivotNames.length > 0
+            ? pivotNames
+            : impl.implementer_id
+              ? [profilesMap.get(impl.implementer_id) || "Não atribuído"]
+              : ["Não atribuído"];
+
+          return { ...impl, analysts };
+        });
+
         setImplementations(implementationsWithNames as Implementation[]);
       } else {
         setImplementations([]);
@@ -126,6 +145,7 @@ export default function ImplantacoesAdmin() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+      agendada: { variant: "secondary", label: "Agendada" },
       em_andamento: { variant: "default", label: "Em Andamento" },
       pausada: { variant: "secondary", label: "Pausada" },
       concluida: { variant: "outline", label: "Concluída" },
@@ -183,7 +203,7 @@ export default function ImplantacoesAdmin() {
                     <TableRow>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Modo</TableHead>
-                      <TableHead>Implantador</TableHead>
+                      <TableHead>Implantador(es)</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Progresso</TableHead>
                       <TableHead>Tempo</TableHead>
@@ -202,7 +222,13 @@ export default function ImplantacoesAdmin() {
                           <TableCell>
                             {impl.commission_type?.name || "-"}
                           </TableCell>
-                          <TableCell>{impl.implementer?.name || "Não atribuído"}</TableCell>
+                          <TableCell>
+                            <div className="space-y-0.5">
+                              {impl.analysts.map((name, idx) => (
+                                <div key={idx} className="text-sm">{name}</div>
+                              ))}
+                            </div>
+                          </TableCell>
                           <TableCell>{getStatusBadge(impl.status)}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
