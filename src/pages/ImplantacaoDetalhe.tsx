@@ -131,7 +131,8 @@ export default function ImplantacaoDetalhe() {
         .from("episodes")
         .select("*")
         .eq("implementation_id", id)
-        .order("episode_date", { ascending: false });
+        .order("episode_date", { ascending: true })
+        .order("start_time", { ascending: true });
 
       if (episodesData) {
         setEpisodes(episodesData);
@@ -276,7 +277,7 @@ export default function ImplantacaoDetalhe() {
 
       if (error) throw error;
 
-      setEpisodes((prev) => [data, ...prev]);
+      setEpisodes((prev) => [...prev, data]);
       setEpisodeDialogOpen(false);
       resetEpisodeForm();
       await recalculateTotalTimeFromDB();
