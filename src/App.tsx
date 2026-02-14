@@ -95,6 +95,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/admin/minhas-implantacoes"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <ImplantadorDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/implantacoes/:id/editar"
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
