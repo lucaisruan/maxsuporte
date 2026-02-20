@@ -320,46 +320,54 @@ export default function ImplantacaoDetalhe() {
     const pendingItems = checklistItems.filter((i) => !i.is_completed);
     const implType = getImplementationTypeLabel();
 
-    const report = `
-═══════════════════════════════════════════════
-           RELATÓRIO DE IMPLANTAÇÃO
-           MAX IMPLANTAÇÕES
-═══════════════════════════════════════════════
+    const formatDateBR = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("pt-BR");
+    };
 
-📋 DADOS DO CLIENTE
-───────────────────────────────────────────────
+    const now = new Date();
+    const geradoEm = `${now.toLocaleDateString("pt-BR")}, ${now.toLocaleTimeString("pt-BR")}`;
+
+    const report = `
+===============================================
+           RELATORIO DE IMPLANTACAO
+           MAX IMPLANTACOES
+===============================================
+
+DADOS DO CLIENTE
+-----------------------------------------------
 Cliente: ${implementation.client?.name || "N/A"}
 CNPJ: ${implementation.client?.cnpj || "N/A"}
 ${implType ? `Tipo: ${implType}` : ""}
 
-📅 PERÍODO
-───────────────────────────────────────────────
-Início: ${new Date(implementation.start_date).toLocaleDateString("pt-BR")}
-Término: ${implementation.end_date ? new Date(implementation.end_date).toLocaleDateString("pt-BR") : "Em andamento"}
+PERIODO
+-----------------------------------------------
+Inicio: ${formatDateBR(implementation.start_date)}
+Termino: ${implementation.end_date ? formatDateBR(implementation.end_date) : "Em andamento"}
 Status: ${implementation.status.replace("_", " ").toUpperCase()}
 
-⏱️ TEMPO TOTAL
-───────────────────────────────────────────────
+TEMPO TOTAL
+-----------------------------------------------
 ${Math.floor(implementation.total_time_minutes / 60)}h ${implementation.total_time_minutes % 60}min
 
-✅ ETAPAS CONCLUÍDAS (${completedItems.length}/${checklistItems.length})
-───────────────────────────────────────────────
-${completedItems.map((item) => `• ${item.title} - ${Math.floor(item.time_spent_minutes / 60)}h ${item.time_spent_minutes % 60}min${item.observations ? `\n  Obs: ${item.observations}` : ""}`).join("\n")}
+ETAPAS CONCLUIDAS (${completedItems.length}/${checklistItems.length})
+-----------------------------------------------
+${completedItems.map((item) => `- ${item.title} - ${Math.floor(item.time_spent_minutes / 60)}h ${item.time_spent_minutes % 60}min${item.observations ? `\n  Obs: ${item.observations}` : ""}`).join("\n")}
 
-❌ ETAPAS PENDENTES (${pendingItems.length})
-───────────────────────────────────────────────
-${pendingItems.length > 0 ? pendingItems.map((item) => `• ${item.title}`).join("\n") : "Todas as etapas foram concluídas!"}
+ETAPAS PENDENTES (${pendingItems.length})
+-----------------------------------------------
+${pendingItems.length > 0 ? pendingItems.map((item) => `- ${item.title}`).join("\n") : "Todas as etapas foram concluidas!"}
 
-📝 EPISÓDIOS REGISTRADOS (${episodes.length})
-───────────────────────────────────────────────
-${episodes.map((ep) => `• [${ep.episode_date}] ${ep.episode_type.toUpperCase()} - ${ep.module}
-  Horário: ${ep.start_time} às ${ep.end_time} (${Math.floor(ep.time_spent_minutes / 60)}h ${ep.time_spent_minutes % 60}min)
+EPISODIOS REGISTRADOS (${episodes.length})
+-----------------------------------------------
+${episodes.map((ep) => `- [${formatDateBR(ep.episode_date)}] ${ep.episode_type.toUpperCase()} - ${ep.module}
+  Horario: ${ep.start_time} as ${ep.end_time} (${Math.floor(ep.time_spent_minutes / 60)}h ${ep.time_spent_minutes % 60}min)
   ${ep.trained_clients ? `Treinados: ${ep.trained_clients}` : ""}
   ${ep.observations ? `Obs: ${ep.observations}` : ""}`).join("\n\n")}
 
-═══════════════════════════════════════════════
-Relatório gerado em: ${new Date().toLocaleString("pt-BR")}
-═══════════════════════════════════════════════
+===============================================
+Relatorio gerado em: ${geradoEm}
+===============================================
     `.trim();
 
     navigator.clipboard.writeText(report);
