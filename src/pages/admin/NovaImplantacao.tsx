@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { WebhookService } from "@/lib/webhookService";
 
 interface Implementer {
   user_id: string;
@@ -207,6 +208,22 @@ export default function NovaImplantacao() {
         );
 
       if (checklistError) throw checklistError;
+
+      // Webhook: implantacao_criada
+      const selectedNames = selectedImplementerIds
+        .map((uid) => implementers.find((i) => i.user_id === uid)?.name)
+        .filter(Boolean)
+        .join(", ");
+      const selectedCommission = commissionTypes.find((ct) => ct.id === commissionTypeId);
+      WebhookService.send("implantacao_criada", {
+        implantacao_id: implData.id,
+        cliente: clientName,
+        tipo_implantacao: selectedCommission?.name || "",
+        data_inicio: startDate,
+        analistas: selectedNames,
+        tempo_negociado: `${negotiatedHours || "0"}h ${negotiatedMinutesField || "0"}min`,
+        created_by: user?.id,
+      });
 
       toast({
         title: isScheduled ? "Implantação agendada!" : "Implantação criada!",

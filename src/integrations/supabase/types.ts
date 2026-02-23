@@ -429,6 +429,33 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          evento: string
+          id: string
+          payload: Json
+          response: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          evento: string
+          id?: string
+          payload: Json
+          response?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          evento?: string
+          id?: string
+          payload?: Json
+          response?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
