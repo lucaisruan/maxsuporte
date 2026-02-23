@@ -18,6 +18,7 @@ import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer } from "luci
 import { ChecklistItemCard } from "@/components/checklist/ChecklistItemCard";
 import { CommissionSelectionModal } from "@/components/commission/CommissionSelectionModal";
 import { NegotiatedTimeCard } from "@/components/implementation/NegotiatedTimeCard";
+import { WebhookService } from "@/lib/webhookService";
 
 interface ChecklistItem {
   id: string;
@@ -161,11 +162,26 @@ export default function ImplantacaoDetalhe() {
 
       if (error) throw error;
 
-      setChecklistItems((prev) =>
-        prev.map((item) =>
+      setChecklistItems((prev) => {
+        const updated = prev.map((item) =>
           item.id === itemId ? { ...item, [field]: value } : item
-        )
-      );
+        );
+
+        // Webhook: checklist_concluido when item is completed and all are done
+        if (field === "is_completed" && value === true) {
+          const allCompleted = updated.every((item) => item.is_completed);
+          if (allCompleted) {
+            WebhookService.send("checklist_concluido", {
+              implantacao_id: id,
+              cliente: implementation?.client?.name || "",
+              analista: user?.email || "",
+              percentual_conclusao: "100%",
+            });
+          }
+        }
+
+        return updated;
+      });
 
       // Recalculate total time from database (not from stale state)
       if (field === "time_spent_minutes") {
@@ -180,7 +196,7 @@ export default function ImplantacaoDetalhe() {
     } finally {
       setSavingItem(null);
     }
-  }, [id, toast]);
+  }, [id, toast, implementation, user]);
 
   // Recalculates total time by fetching fresh data from database
   const recalculateTotalTimeFromDB = useCallback(async () => {
@@ -281,6 +297,39 @@ export default function ImplantacaoDetalhe() {
       setEpisodeDialogOpen(false);
       resetEpisodeForm();
       await recalculateTotalTimeFromDB();
+
+      // Webhook: episodio_finalizado
+      WebhookService.send("episodio_finalizado", {
+        implantacao_id: id,
+        episodio_id: data.id,
+        cliente: implementation?.client?.name || "",
+        analista: user?.email || "",
+        titulo: `${getEpisodeTypeLabel(data.episode_type)} - ${getModuleLabel(data.module)}`,
+        duracao: `${Math.floor(timeSpentMinutes / 60)}h ${timeSpentMinutes % 60}min`,
+      });
+
+      // Check if negotiated time exceeded (exclude migration)
+      if (implementation?.negotiated_time_minutes) {
+        const allEpisodes = [...episodes, data];
+        const nonMigrationTime = allEpisodes
+          .filter((ep) => ep.episode_type !== "migracao")
+          .reduce((acc, ep) => acc + ep.time_spent_minutes, 0);
+
+        if (nonMigrationTime > implementation.negotiated_time_minutes) {
+          const percentExceeded = Math.round(
+            ((nonMigrationTime - implementation.negotiated_time_minutes) /
+              implementation.negotiated_time_minutes) *
+              100
+          );
+          WebhookService.send("tempo_excedido", {
+            implantacao_id: id,
+            cliente: implementation.client?.name || "",
+            tempo_negociado: `${Math.floor(implementation.negotiated_time_minutes / 60)}h ${implementation.negotiated_time_minutes % 60}min`,
+            tempo_utilizado: `${Math.floor(nonMigrationTime / 60)}h ${nonMigrationTime % 60}min`,
+            percentual_excedido: `${percentExceeded}%`,
+          });
+        }
+      }
 
       toast({
         title: "Episódio adicionado!",
