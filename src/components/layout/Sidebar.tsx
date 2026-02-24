@@ -56,6 +56,10 @@ export function Sidebar({
     to: "/implantador/implantacoes",
     icon: ClipboardList,
     label: "Minhas Implantações"
+  }, {
+    to: "/implantador/relatorio-comissoes",
+    icon: FileText,
+    label: "Relatório"
   }];
   const links = role === "admin" ? adminLinks : implantadorLinks;
   return <>

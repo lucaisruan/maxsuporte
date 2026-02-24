@@ -35,6 +35,7 @@ export default function NovaImplantacao() {
   const [negotiatedHours, setNegotiatedHours] = useState("");
   const [negotiatedMinutesField, setNegotiatedMinutesField] = useState("");
   const [observations, setObservations] = useState("");
+  const [hasDataMigration, setHasDataMigration] = useState(false);
   const [implementers, setImplementers] = useState<Implementer[]>([]);
   const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -167,6 +168,7 @@ export default function NovaImplantacao() {
           actual_start_date: isScheduled ? null : new Date().toISOString(),
           status: status as "agendada" | "em_andamento",
           negotiated_time_minutes: totalNegotiatedMinutes,
+          has_data_migration: hasDataMigration,
           observations,
           created_by: user?.id,
         })
@@ -195,7 +197,8 @@ export default function NovaImplantacao() {
         { title: "Alinhamento Fiscal e Contábil", description: "Último número de NF/NFC, Série, CSC e tipo de documento fiscal", order_index: 4 },
         { title: "Identidade Visual", description: "Logo e papel de parede do cliente no sistema", order_index: 5 },
         { title: "Parametrizações do Sistema", description: "Regras, bloqueios e fluxo de venda", order_index: 6 },
-        { title: "Treinamentos", description: "Vendas, Cadastros, Financeiro, Caixa e Relatórios", order_index: 7 },
+        { title: "Instalação do sistema", description: "Instalação e configuração inicial do sistema no ambiente do cliente", order_index: 7 },
+        { title: "Treinamentos", description: "Vendas, Cadastros, Financeiro, Caixa e Relatórios", order_index: 8 },
       ];
 
       const { error: checklistError } = await supabase
@@ -397,6 +400,17 @@ export default function NovaImplantacao() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasDataMigration"
+                  checked={hasDataMigration}
+                  onCheckedChange={(checked) => setHasDataMigration(!!checked)}
+                />
+                <Label htmlFor="hasDataMigration" className="cursor-pointer text-sm font-normal">
+                  Implantação com Migração de Dados
+                </Label>
               </div>
 
               <div className="space-y-2">

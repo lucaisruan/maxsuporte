@@ -41,6 +41,7 @@ interface Implementation {
   status: string;
   observations: string | null;
   negotiated_time_minutes: number | null;
+  has_data_migration: boolean;
   client: Client;
 }
 
@@ -59,6 +60,7 @@ export default function EditarImplantacao() {
   const [negotiatedHours, setNegotiatedHours] = useState("");
   const [negotiatedMinutesField, setNegotiatedMinutesField] = useState("");
   const [observations, setObservations] = useState("");
+  const [hasDataMigration, setHasDataMigration] = useState(false);
   const [implementers, setImplementers] = useState<Implementer[]>([]);
   const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +88,7 @@ export default function EditarImplantacao() {
           status,
           observations,
           negotiated_time_minutes,
+          has_data_migration,
           client:clients(id, name, cnpj, observations)
         `)
         .eq("id", id)
@@ -107,6 +110,7 @@ export default function EditarImplantacao() {
         setNegotiatedHours(String(Math.floor(negMin / 60)));
         setNegotiatedMinutesField(String(negMin % 60));
         setObservations(typedData.observations || "");
+        setHasDataMigration(typedData.has_data_migration || false);
       }
 
       // Fetch existing analysts from pivot table
@@ -237,6 +241,7 @@ export default function EditarImplantacao() {
           start_date: new Date(startDate).toISOString(),
           status: newStatus as "agendada" | "em_andamento" | "pausada" | "concluida" | "cancelada",
           negotiated_time_minutes: totalNegotiatedMinutes,
+          has_data_migration: hasDataMigration,
           observations: observations || null,
         })
         .eq("id", id);
@@ -449,6 +454,17 @@ export default function EditarImplantacao() {
                     ? "Não é possível alterar o tempo negociado de implantações concluídas."
                     : "Mínimo: 30 minutos. Tempo de migração de dados não é contabilizado."}
                 </p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasDataMigrationEdit"
+                  checked={hasDataMigration}
+                  onCheckedChange={(checked) => setHasDataMigration(!!checked)}
+                />
+                <Label htmlFor="hasDataMigrationEdit" className="cursor-pointer text-sm font-normal">
+                  Implantação com Migração de Dados
+                </Label>
               </div>
 
               <div className="space-y-2">

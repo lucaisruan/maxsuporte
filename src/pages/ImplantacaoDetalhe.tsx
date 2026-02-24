@@ -50,6 +50,7 @@ interface Implementation {
   end_date: string | null;
   total_time_minutes: number;
   negotiated_time_minutes: number | null;
+  has_data_migration: boolean;
   observations: string | null;
   client: { name: string; cnpj: string | null } | null;
   commission_type: { name: string } | null;
@@ -105,6 +106,7 @@ export default function ImplantacaoDetalhe() {
           end_date,
           total_time_minutes,
           negotiated_time_minutes,
+          has_data_migration,
           observations,
           client:clients(name, cnpj),
           commission_type:commission_types(name)
@@ -167,9 +169,13 @@ export default function ImplantacaoDetalhe() {
           item.id === itemId ? { ...item, [field]: value } : item
         );
 
-        // Webhook: checklist_concluido when item is completed and all are done
+        // Webhook: checklist_concluido when item is completed and all visible are done
         if (field === "is_completed" && value === true) {
-          const allCompleted = updated.every((item) => item.is_completed);
+          const visibleItems = updated.filter((item) => {
+            if (item.title === "Migração de Dados" && !implementation?.has_data_migration) return false;
+            return true;
+          });
+          const allCompleted = visibleItems.every((item) => item.is_completed);
           if (allCompleted) {
             WebhookService.send("checklist_concluido", {
               implantacao_id: id,
@@ -278,7 +284,7 @@ export default function ImplantacaoDetalhe() {
         .from("episodes")
         .insert({
           implementation_id: id!,
-          episode_type: episodeType as "treinamento" | "parametrizacao" | "ajuste_fiscal" | "migracao",
+          episode_type: episodeType as "treinamento" | "parametrizacao" | "ajuste_fiscal" | "migracao" | "instalacao",
           module: episodeModule as "vendas" | "financeiro" | "cadastros" | "relatorios" | "caixa" | "fiscal" | "geral",
           trained_clients: trainedClients || null,
           episode_date: episodeDate,
@@ -365,8 +371,8 @@ export default function ImplantacaoDetalhe() {
   const generateReport = () => {
     if (!implementation) return;
 
-    const completedItems = checklistItems.filter((i) => i.is_completed);
-    const pendingItems = checklistItems.filter((i) => !i.is_completed);
+    const completedItems = visibleChecklistItems.filter((i) => i.is_completed);
+    const pendingItems = visibleChecklistItems.filter((i) => !i.is_completed);
     const implType = getImplementationTypeLabel();
 
     const formatDateBR = (dateStr: string) => {
@@ -399,7 +405,7 @@ TEMPO TOTAL
 -----------------------------------------------
 ${Math.floor(implementation.total_time_minutes / 60)}h ${implementation.total_time_minutes % 60}min
 
-ETAPAS CONCLUIDAS (${completedItems.length}/${checklistItems.length})
+ETAPAS CONCLUIDAS (${completedItems.length}/${visibleChecklistItems.length})
 -----------------------------------------------
 ${completedItems.map((item) => `- ${item.title} - ${Math.floor(item.time_spent_minutes / 60)}h ${item.time_spent_minutes % 60}min${item.observations ? `\n  Obs: ${item.observations}` : ""}`).join("\n")}
 
@@ -426,10 +432,20 @@ Relatorio gerado em: ${geradoEm}
     });
   };
 
+  // Filter checklist items based on migration flag
+  const visibleChecklistItems = implementation
+    ? checklistItems.filter((item) => {
+        if (item.title === "Migração de Dados" && !implementation.has_data_migration) {
+          return false;
+        }
+        return true;
+      })
+    : checklistItems;
+
   const getProgress = () => {
-    if (checklistItems.length === 0) return 0;
-    const completed = checklistItems.filter((item) => item.is_completed).length;
-    return Math.round((completed / checklistItems.length) * 100);
+    if (visibleChecklistItems.length === 0) return 0;
+    const completed = visibleChecklistItems.filter((item) => item.is_completed).length;
+    return Math.round((completed / visibleChecklistItems.length) * 100);
   };
 
   const formatTime = (minutes: number) => {
@@ -444,6 +460,7 @@ Relatorio gerado em: ${geradoEm}
       parametrizacao: "Parametrização",
       ajuste_fiscal: "Ajuste Fiscal",
       migracao: "Migração",
+      instalacao: "Instalação",
     };
     return labels[type] || type;
   };
@@ -711,7 +728,7 @@ Relatorio gerado em: ${geradoEm}
                     <span className="text-sm text-muted-foreground">Etapas</span>
                   </div>
                   <p className="mt-1 text-lg font-bold">
-                    {checklistItems.filter((i) => i.is_completed).length}/{checklistItems.length}
+                    {visibleChecklistItems.filter((i) => i.is_completed).length}/{visibleChecklistItems.length}
                   </p>
                 </div>
               </div>
@@ -729,7 +746,7 @@ Relatorio gerado em: ${geradoEm}
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {checklistItems.map((item) => (
+              {visibleChecklistItems.map((item) => (
                 <ChecklistItemCard
                   key={item.id}
                   item={item}
@@ -822,7 +839,10 @@ Relatorio gerado em: ${geradoEm}
                             <SelectItem value="treinamento">Treinamento</SelectItem>
                             <SelectItem value="parametrizacao">Parametrização</SelectItem>
                             <SelectItem value="ajuste_fiscal">Ajuste Fiscal</SelectItem>
-                            <SelectItem value="migracao">Migração</SelectItem>
+                            <SelectItem value="instalacao">Instalação</SelectItem>
+                            {implementation?.has_data_migration && (
+                              <SelectItem value="migracao">Migração</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
