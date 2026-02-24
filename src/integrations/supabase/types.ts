@@ -305,6 +305,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           end_date: string | null
+          has_data_migration: boolean
           id: string
           implementation_type:
             | Database["public"]["Enums"]["implementation_type"]
@@ -327,6 +328,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           end_date?: string | null
+          has_data_migration?: boolean
           id?: string
           implementation_type?:
             | Database["public"]["Enums"]["implementation_type"]
@@ -349,6 +351,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           end_date?: string | null
+          has_data_migration?: boolean
           id?: string
           implementation_type?:
             | Database["public"]["Enums"]["implementation_type"]
@@ -489,6 +492,7 @@ export type Database = {
         | "parametrizacao"
         | "ajuste_fiscal"
         | "migracao"
+        | "instalacao"
       implementation_status:
         | "em_andamento"
         | "pausada"
@@ -637,6 +641,7 @@ export const Constants = {
         "parametrizacao",
         "ajuste_fiscal",
         "migracao",
+        "instalacao",
       ],
       implementation_status: [
         "em_andamento",

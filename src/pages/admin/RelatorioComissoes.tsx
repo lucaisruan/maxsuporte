@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, DollarSign, CheckCircle2, Clock, Filter } from "lucide-react";
+import { Loader2, DollarSign, CheckCircle2, Clock, Filter, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -64,6 +65,9 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function RelatorioComissoes() {
+  const { user, role } = useAuth();
+  const isImplantador = role === "implantador";
+  
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [implementers, setImplementers] = useState<Implementer[]>([]);
   const [commissionTypes, setCommissionTypes] = useState<CommissionType[]>([]);
@@ -75,7 +79,8 @@ export default function RelatorioComissoes() {
   // Filters
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
-  const [selectedImplementer, setSelectedImplementer] = useState<string>("all");
+  // For implantadores, always filter by own id
+  const [selectedImplementer, setSelectedImplementer] = useState<string>(isImplantador ? (user?.id || "all") : "all");
   const [selectedType, setSelectedType] = useState<string>("all");
   
   const [showOnlyPending, setShowOnlyPending] = useState(false);
@@ -128,6 +133,9 @@ export default function RelatorioComissoes() {
   const fetchImplementations = async () => {
     setLoading(true);
     try {
+      // For implantadores, enforce own user id filter
+      const effectiveImplementer = isImplantador ? user?.id : selectedImplementer;
+
       let query = supabase
         .from("implementations")
         .select("id, implementation_type, status, end_date, commission_value, commission_paid, commission_paid_at, implementer_id, client:clients(name)")
@@ -136,8 +144,21 @@ export default function RelatorioComissoes() {
         .lte("end_date", endDate + "T23:59:59")
         .order("end_date", { ascending: false });
 
-      if (selectedImplementer !== "all") {
-        query = query.eq("implementer_id", selectedImplementer);
+      if (effectiveImplementer && effectiveImplementer !== "all") {
+        // Need to also consider analysts from the pivot table
+        // First get implementation IDs where user is an analyst
+        const { data: analystAssignments } = await supabase
+          .from("implementation_analysts" as any)
+          .select("implementation_id")
+          .eq("analyst_id", effectiveImplementer);
+
+        const analystImplIds = (analystAssignments as any[] || []).map((a: any) => a.implementation_id);
+
+        if (analystImplIds.length > 0) {
+          query = query.or(`implementer_id.eq.${effectiveImplementer},id.in.(${analystImplIds.join(",")})`);
+        } else {
+          query = query.eq("implementer_id", effectiveImplementer);
+        }
       }
 
       if (selectedType !== "all") {
@@ -280,10 +301,20 @@ export default function RelatorioComissoes() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Info banner for implantadores */}
+        {isImplantador && (
+          <Card className="border-blue-200 dark:border-blue-900">
+            <CardContent className="flex items-center gap-2 py-3">
+              <Info className="h-4 w-4 text-blue-600" />
+              <span className="text-sm text-muted-foreground">Visualizando apenas suas comissões</span>
+            </CardContent>
+          </Card>
+        )}
+
         <div>
           <h1 className="text-2xl font-bold text-foreground">Relatório de Comissionamento</h1>
           <p className="text-muted-foreground">
-            Acompanhe as comissões de cada implantador
+            {isImplantador ? "Acompanhe suas comissões" : "Acompanhe as comissões de cada implantador"}
           </p>
         </div>
 
@@ -296,7 +327,7 @@ export default function RelatorioComissoes() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div className={`grid gap-4 md:grid-cols-2 ${isImplantador ? 'lg:grid-cols-4' : 'lg:grid-cols-5'}`}>
               <div className="space-y-2">
                 <Label>Data Inicial</Label>
                 <Input
@@ -313,22 +344,24 @@ export default function RelatorioComissoes() {
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Implantador</Label>
-                <Select value={selectedImplementer} onValueChange={setSelectedImplementer}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {implementers.map((impl) => (
-                      <SelectItem key={impl.user_id} value={impl.user_id}>
-                        {impl.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!isImplantador && (
+                <div className="space-y-2">
+                  <Label>Implantador</Label>
+                  <Select value={selectedImplementer} onValueChange={setSelectedImplementer}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {implementers.map((impl) => (
+                        <SelectItem key={impl.user_id} value={impl.user_id}>
+                          {impl.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Modo de Implantação</Label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
@@ -426,15 +459,15 @@ export default function RelatorioComissoes() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Implantador</TableHead>
-                      <TableHead>Comissões</TableHead>
-                      <TableHead>Data Conclusão</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-center">Ação</TableHead>
-                    </TableRow>
+                     <TableRow>
+                       <TableHead>Cliente</TableHead>
+                       {!isImplantador && <TableHead>Implantador</TableHead>}
+                       <TableHead>Comissões</TableHead>
+                       <TableHead>Data Conclusão</TableHead>
+                       <TableHead className="text-right">Total</TableHead>
+                       <TableHead className="text-center">Status</TableHead>
+                       {!isImplantador && <TableHead className="text-center">Ação</TableHead>}
+                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {implementations.map((impl) => (
@@ -442,7 +475,7 @@ export default function RelatorioComissoes() {
                         <TableCell className="font-medium">
                           {impl.client?.name || "-"}
                         </TableCell>
-                        <TableCell>{getImplementerName(impl.implementer_id)}</TableCell>
+                        {!isImplantador && <TableCell>{getImplementerName(impl.implementer_id)}</TableCell>}
                         <TableCell>
                           {impl.commissions.length > 0 ? (
                             <div className="space-y-1">
@@ -484,22 +517,24 @@ export default function RelatorioComissoes() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant={impl.commission_paid ? "outline" : "default"}
-                            size="sm"
-                            onClick={() => handleTogglePaid(impl.id, impl.commission_paid)}
-                            disabled={updating === impl.id}
-                          >
-                            {updating === impl.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : impl.commission_paid ? (
-                              "Desfazer"
-                            ) : (
-                              "Marcar Pago"
-                            )}
-                          </Button>
-                        </TableCell>
+                        {!isImplantador && (
+                          <TableCell className="text-center">
+                            <Button
+                              variant={impl.commission_paid ? "outline" : "default"}
+                              size="sm"
+                              onClick={() => handleTogglePaid(impl.id, impl.commission_paid)}
+                              disabled={updating === impl.id}
+                            >
+                              {updating === impl.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : impl.commission_paid ? (
+                                "Desfazer"
+                              ) : (
+                                "Marcar Pago"
+                              )}
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>

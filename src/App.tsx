@@ -176,6 +176,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/implantador/relatorio-comissoes"
+        element={
+          <ProtectedRoute allowedRoles={["implantador"]}>
+            <RelatorioComissoes />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Catch all */}
       <Route path="*" element={<NotFound />} />
