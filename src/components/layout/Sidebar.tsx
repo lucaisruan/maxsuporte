@@ -93,9 +93,9 @@ export function Sidebar({
             <p className="text-xs text-sidebar-accent-foreground">
               {role === "admin" ? "Administrador" : "Implantador"}
             </p>
-            <p className="mt-1 text-xs text-sidebar-accent-foreground/70">
-              Sistema de Controle de Implantações
-            </p>
+            <p className="mt-1 text-xs text-sidebar-accent-foreground/70">MAX IMPLANTAÇÕES
+
+          </p>
           </div>
         </div>
       </aside>
