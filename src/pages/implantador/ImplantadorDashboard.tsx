@@ -33,7 +33,6 @@ export default function ImplantadorDashboard() {
 
   const fetchImplementations = async () => {
     try {
-      // Get implementation IDs from pivot table
       const { data: assignments } = await supabase
         .from("implementation_analysts" as any)
         .select("implementation_id")
@@ -41,7 +40,6 @@ export default function ImplantadorDashboard() {
 
       const assignedIds = (assignments as any[] || []).map((a: any) => a.implementation_id);
 
-      // Build query - get implementations where user is assigned via pivot table or legacy implementer_id
       let query = supabase
         .from("implementations")
         .select(`
@@ -65,7 +63,6 @@ export default function ImplantadorDashboard() {
       const { data } = await query;
 
       if (data) {
-        // Deduplicate by id
         const unique = Array.from(new Map((data as Implementation[]).map(i => [i.id, i])).values());
         setImplementations(unique);
       }
@@ -120,41 +117,33 @@ export default function ImplantadorDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Minhas Implantações</h1>
-          <p className="text-muted-foreground">Acompanhe suas implantações em andamento</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Minhas Implantações</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Acompanhe suas implantações em andamento</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{stats.inProgress}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-            </CardContent>
-          </Card>
+        {/* KPI Cards */}
+        <div className="grid gap-5 md:grid-cols-3 stagger-children">
+          {[
+            { label: "Total", value: stats.total, icon: ClipboardList, color: "text-foreground" },
+            { label: "Em Andamento", value: stats.inProgress, icon: Clock, color: "text-primary" },
+            { label: "Concluídas", value: stats.completed, icon: ClipboardList, color: "text-[hsl(142_76%_36%)]" },
+          ].map((kpi) => (
+            <Card key={kpi.label}>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {kpi.label}
+                </CardTitle>
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/8">
+                  <kpi.icon className="h-4 w-4 text-primary/70" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Implementations List */}
@@ -165,22 +154,22 @@ export default function ImplantadorDashboard() {
           </CardHeader>
           <CardContent>
             {implementations.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
+              <div className="py-12 text-center text-muted-foreground">
                 Nenhuma implantação atribuída a você ainda.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {implementations.map((impl) => {
                   const progress = getProgress(impl.checklist_items);
                   return (
                     <Link
                       key={impl.id}
                       to={`${basePath}/implantacoes/${impl.id}`}
-                      className="block rounded-lg border border-border p-4 transition-colors hover:bg-accent/50"
+                      className="block rounded-xl border border-border/40 bg-card p-5 shadow-sm transition-all duration-150 hover:shadow-md hover:-translate-y-0.5"
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <h3 className="font-medium text-foreground">
+                          <h3 className="font-semibold text-foreground">
                             {impl.client?.name || "Cliente não definido"}
                           </h3>
                           <p className="text-sm text-muted-foreground">
@@ -191,14 +180,14 @@ export default function ImplantadorDashboard() {
                           {getStatusBadge(impl.status)}
                         </div>
                       </div>
-                      <div className="mt-3 space-y-1">
+                      <div className="mt-4 space-y-1.5">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Progresso</span>
-                          <span className="font-medium">{progress}%</span>
+                          <span className="text-xs font-medium">{progress}%</span>
                         </div>
-                        <Progress value={progress} className="h-2" />
+                        <Progress value={progress} className="h-1.5" />
                       </div>
-                      <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
                         <span>Tempo total: {formatTime(impl.total_time_minutes)}</span>
                         {impl.negotiated_time_minutes && impl.negotiated_time_minutes > 0 && (
                           <NegotiatedTimeBadge
