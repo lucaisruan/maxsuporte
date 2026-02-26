@@ -26,7 +26,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-card">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-card shadow-sm">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-4">
           {onMenuClick && (
@@ -39,35 +39,37 @@ export function Header({ onMenuClick }: HeaderProps) {
               <Menu className="h-5 w-5" />
             </Button>
           )}
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="MAX IMPLANTAÇÕES" className="h-8 w-8 object-contain" />
-            <span className="text-lg font-bold text-foreground">MAX IMPLANTAÇÕES</span>
+          <div className="flex items-center gap-2.5">
+            <img src={logo} alt="MAX IMPLANTAÇÕES" className="h-8 w-8 rounded object-contain" />
+            <span className="text-lg font-semibold tracking-tight text-foreground">
+              MAX IMPLANTAÇÕES
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
+              <Button variant="ghost" className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                   <User className="h-4 w-4 text-primary" />
                 </div>
                 <div className="hidden text-left md:block">
-                  <p className="text-sm font-medium text-foreground">{profile?.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{role}</p>
+                  <p className="text-sm font-medium leading-tight text-foreground">{profile?.name}</p>
+                  <p className="text-[11px] text-muted-foreground capitalize">{role}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Minha Conta</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex items-center gap-2">
-                <User className="h-4 w-4" />
+              <DropdownMenuItem className="flex items-center gap-2 text-sm">
+                <User className="h-4 w-4 text-muted-foreground" />
                 <span>{profile?.email}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="flex items-center gap-2 text-destructive"
+                className="flex items-center gap-2 text-destructive focus:text-destructive"
                 onClick={handleSignOut}
               >
                 <LogOut className="h-4 w-4" />

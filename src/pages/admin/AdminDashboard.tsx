@@ -57,7 +57,6 @@ export default function AdminDashboard() {
       if (implData && implData.length > 0) {
         const implIds = implData.map(impl => impl.id);
 
-        // Fetch analysts from pivot table
         const { data: pivotData } = await supabase
           .from("implementation_analysts" as any)
           .select("implementation_id, analyst_id")
@@ -99,7 +98,6 @@ export default function AdminDashboard() {
         setImplementations([]);
       }
 
-      // Fetch stats
       const [totalRes, scheduledRes, inProgressRes, completedRes, usersRes] = await Promise.all([
         supabase.from("implementations").select("*", { count: "exact", head: true }),
         supabase.from("implementations").select("*", { count: "exact", head: true }).eq("status", "agendada"),
@@ -157,56 +155,42 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">Visão geral das implantações</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Dashboard</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Visão geral das implantações</p>
           </div>
           <Link to="/admin/implantacoes/nova">
-            <Button>
+            <Button className="shadow-sm">
               <Plus className="mr-2 h-4 w-4" />
               Nova Implantação
             </Button>
           </Link>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent><div className="text-2xl font-bold">{stats.totalImplementations}</div></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Agendadas</CardTitle>
-              <CalendarClock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-blue-600">{stats.scheduled}</div></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-primary">{stats.inProgress}</div></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent><div className="text-2xl font-bold text-green-600">{stats.completed}</div></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Usuários</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent><div className="text-2xl font-bold">{stats.totalUsers}</div></CardContent>
-          </Card>
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-5 stagger-children">
+          {[
+            { label: "Total", value: stats.totalImplementations, icon: ClipboardList, color: "text-foreground" },
+            { label: "Agendadas", value: stats.scheduled, icon: CalendarClock, color: "text-muted-foreground" },
+            { label: "Em Andamento", value: stats.inProgress, icon: Clock, color: "text-primary" },
+            { label: "Concluídas", value: stats.completed, icon: Building2, color: "text-[hsl(142_76%_36%)]" },
+            { label: "Usuários", value: stats.totalUsers, icon: Users, color: "text-foreground" },
+          ].map((kpi) => (
+            <Card key={kpi.label}>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {kpi.label}
+                </CardTitle>
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/8">
+                  <kpi.icon className="h-4 w-4 text-primary/70" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Card>
@@ -216,7 +200,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             {implementations.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
+              <div className="py-12 text-center text-muted-foreground">
                 Nenhuma implantação encontrada.
                 <br />
                 <Link to="/admin/implantacoes/nova" className="text-primary hover:underline">
@@ -224,18 +208,18 @@ export default function AdminDashboard() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {implementations.map((impl) => {
                   const progress = getProgress(impl.checklist_items);
                   return (
                     <Link
                       key={impl.id}
                       to={`/admin/implantacoes/${impl.id}`}
-                      className="block rounded-lg border border-border p-4 transition-colors hover:bg-accent/50"
+                      className="block rounded-xl border border-border/40 bg-card p-5 shadow-sm transition-all duration-150 hover:shadow-md hover:-translate-y-0.5"
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <h3 className="font-medium text-foreground">
+                          <h3 className="font-semibold text-foreground">
                             {impl.client?.name || "Cliente não definido"}
                           </h3>
                           <p className="text-sm text-muted-foreground">
@@ -246,14 +230,14 @@ export default function AdminDashboard() {
                           {getStatusBadge(impl.status)}
                         </div>
                       </div>
-                      <div className="mt-3 space-y-1">
+                      <div className="mt-4 space-y-1.5">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Progresso</span>
-                          <span className="font-medium">{progress}%</span>
+                          <span className="text-xs font-medium">{progress}%</span>
                         </div>
-                        <Progress value={progress} className="h-2" />
+                        <Progress value={progress} className="h-1.5" />
                       </div>
-                      <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
                         <span>Tempo: {formatTime(impl.total_time_minutes)}</span>
                         <span>Início: {new Date(impl.start_date).toLocaleDateString("pt-BR")}</span>
                         {impl.negotiated_time_minutes && impl.negotiated_time_minutes > 0 && (
