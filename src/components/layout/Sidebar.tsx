@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { LayoutDashboard, Users, ClipboardList, X, BarChart3, Calendar, DollarSign, FileText, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, Users, ClipboardList, X, BarChart3, Calendar, DollarSign, FileText, ClipboardCheck, MessageSquare, Brain, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 interface SidebarProps {
   open: boolean;
@@ -51,6 +51,18 @@ export function Sidebar({
     to: "/admin/solicitacoes-conclusao",
     icon: ClipboardCheck,
     label: "Solicitações"
+  }, {
+    to: "/admin/visitas",
+    icon: MessageSquare,
+    label: "Visitas"
+  }, {
+    to: "/admin/base-conhecimento",
+    icon: Brain,
+    label: "Base IA"
+  }, {
+    to: "/admin/guia-visitas",
+    icon: BookOpen,
+    label: "Guia Visitas"
   }];
   const implantadorLinks = [{
     to: "/implantador",
@@ -64,6 +76,14 @@ export function Sidebar({
     to: "/implantador/relatorio-comissoes",
     icon: FileText,
     label: "Relatório"
+  }, {
+    to: "/implantador/visitas",
+    icon: MessageSquare,
+    label: "Visitas"
+  }, {
+    to: "/implantador/guia-visitas",
+    icon: BookOpen,
+    label: "Guia Visitas"
   }];
   const links = role === "admin" ? adminLinks : implantadorLinks;
   return <>

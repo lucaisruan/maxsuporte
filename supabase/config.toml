@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.send-webhook]
 verify_jwt = false
+
+[functions.analyze-visit]
+verify_jwt = false
