@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { LayoutDashboard, Users, ClipboardList, X, BarChart3, Calendar, DollarSign, FileText } from "lucide-react";
+import { LayoutDashboard, Users, ClipboardList, X, BarChart3, Calendar, DollarSign, FileText, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 interface SidebarProps {
   open: boolean;
@@ -47,6 +47,10 @@ export function Sidebar({
     to: "/admin/relatorio-comissoes",
     icon: FileText,
     label: "Relatório"
+  }, {
+    to: "/admin/solicitacoes-conclusao",
+    icon: ClipboardCheck,
+    label: "Solicitações"
   }];
   const implantadorLinks = [{
     to: "/implantador",

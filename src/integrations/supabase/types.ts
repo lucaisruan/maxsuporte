@@ -164,6 +164,50 @@ export type Database = {
         }
         Relationships: []
       }
+      conclusion_requests: {
+        Row: {
+          admin_observation: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          implementation_id: string
+          requester_id: string
+          requester_observation: string | null
+          status: Database["public"]["Enums"]["conclusion_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_observation?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          implementation_id: string
+          requester_id: string
+          requester_observation?: string | null
+          status?: Database["public"]["Enums"]["conclusion_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_observation?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          implementation_id?: string
+          requester_id?: string
+          requester_observation?: string | null
+          status?: Database["public"]["Enums"]["conclusion_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conclusion_requests_implementation_id_fkey"
+            columns: ["implementation_id"]
+            isOneToOne: false
+            referencedRelation: "implementations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       episodes: {
         Row: {
           created_at: string
@@ -487,6 +531,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "implantador"
+      conclusion_request_status: "pending" | "approved" | "rejected"
       episode_type:
         | "treinamento"
         | "parametrizacao"
@@ -636,6 +681,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "implantador"],
+      conclusion_request_status: ["pending", "approved", "rejected"],
       episode_type: [
         "treinamento",
         "parametrizacao",

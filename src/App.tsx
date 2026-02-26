@@ -16,6 +16,7 @@ import RelatoriosProdutividade from "./pages/admin/RelatoriosProdutividade";
 import DisponibilidadeCalendario from "./pages/admin/DisponibilidadeCalendario";
 import ConfiguracaoComissoes from "./pages/admin/ConfiguracaoComissoes";
 import RelatorioComissoes from "./pages/admin/RelatorioComissoes";
+import SolicitacoesConclusao from "./pages/admin/SolicitacoesConclusao";
 import ImplantadorDashboard from "./pages/implantador/ImplantadorDashboard";
 import ImplantacaoDetalhe from "./pages/ImplantacaoDetalhe";
 import NotFound from "./pages/NotFound";
@@ -147,6 +148,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <RelatorioComissoes />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/solicitacoes-conclusao"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <SolicitacoesConclusao />
           </ProtectedRoute>
         }
       />
