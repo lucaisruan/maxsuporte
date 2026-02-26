@@ -19,6 +19,11 @@ import RelatorioComissoes from "./pages/admin/RelatorioComissoes";
 import SolicitacoesConclusao from "./pages/admin/SolicitacoesConclusao";
 import ImplantadorDashboard from "./pages/implantador/ImplantadorDashboard";
 import ImplantacaoDetalhe from "./pages/ImplantacaoDetalhe";
+import VisitasList from "./pages/visitas/VisitasList";
+import NovaVisita from "./pages/visitas/NovaVisita";
+import VisitaDetalhe from "./pages/visitas/VisitaDetalhe";
+import BaseConhecimentoIA from "./pages/admin/BaseConhecimentoIA";
+import GuiaVisitas from "./pages/visitas/GuiaVisitas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -159,6 +164,46 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/visitas"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <VisitasList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/visitas/nova"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <NovaVisita />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/visitas/:id"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <VisitaDetalhe />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/base-conhecimento"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <BaseConhecimentoIA />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/guia-visitas"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <GuiaVisitas />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Implantador routes */}
       <Route
@@ -190,6 +235,38 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["implantador"]}>
             <RelatorioComissoes />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/implantador/visitas"
+        element={
+          <ProtectedRoute allowedRoles={["implantador"]}>
+            <VisitasList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/implantador/visitas/nova"
+        element={
+          <ProtectedRoute allowedRoles={["implantador"]}>
+            <NovaVisita />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/implantador/visitas/:id"
+        element={
+          <ProtectedRoute allowedRoles={["implantador"]}>
+            <VisitaDetalhe />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/implantador/guia-visitas"
+        element={
+          <ProtectedRoute allowedRoles={["implantador"]}>
+            <GuiaVisitas />
           </ProtectedRoute>
         }
       />

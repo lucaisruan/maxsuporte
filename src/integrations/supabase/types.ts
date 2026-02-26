@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      base_conhecimento_ia: {
+        Row: {
+          ativo: boolean
+          categoria: Database["public"]["Enums"]["knowledge_category"]
+          contexto: string
+          created_at: string
+          created_by: string | null
+          diretriz_decisao: string | null
+          id: string
+          perfil_cliente: string | null
+          sugestao_servico: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria: Database["public"]["Enums"]["knowledge_category"]
+          contexto: string
+          created_at?: string
+          created_by?: string | null
+          diretriz_decisao?: string | null
+          id?: string
+          perfil_cliente?: string | null
+          sugestao_servico?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: Database["public"]["Enums"]["knowledge_category"]
+          contexto?: string
+          created_at?: string
+          created_by?: string | null
+          diretriz_decisao?: string | null
+          id?: string
+          perfil_cliente?: string | null
+          sugestao_servico?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       checklist_items: {
         Row: {
           created_at: string
@@ -455,6 +497,41 @@ export type Database = {
         }
         Relationships: []
       }
+      recomendacoes_visita: {
+        Row: {
+          conteudo: string
+          created_at: string
+          id: string
+          origem: Database["public"]["Enums"]["recommendation_origin"]
+          tipo: Database["public"]["Enums"]["recommendation_type"]
+          visita_id: string
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string
+          id?: string
+          origem: Database["public"]["Enums"]["recommendation_origin"]
+          tipo: Database["public"]["Enums"]["recommendation_type"]
+          visita_id: string
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          id?: string
+          origem?: Database["public"]["Enums"]["recommendation_origin"]
+          tipo?: Database["public"]["Enums"]["recommendation_type"]
+          visita_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recomendacoes_visita_visita_id_fkey"
+            columns: ["visita_id"]
+            isOneToOne: false
+            referencedRelation: "visitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -475,6 +552,95 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      visita_interacoes: {
+        Row: {
+          created_at: string
+          id: string
+          mensagem: string
+          origem: Database["public"]["Enums"]["interaction_origin"]
+          usuario_id: string | null
+          visita_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mensagem: string
+          origem?: Database["public"]["Enums"]["interaction_origin"]
+          usuario_id?: string | null
+          visita_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mensagem?: string
+          origem?: Database["public"]["Enums"]["interaction_origin"]
+          usuario_id?: string | null
+          visita_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visita_interacoes_visita_id_fkey"
+            columns: ["visita_id"]
+            isOneToOne: false
+            referencedRelation: "visitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visitas: {
+        Row: {
+          analista_id: string
+          cliente_id: string
+          created_at: string
+          descricao_situacao: string
+          id: string
+          implantacao_id: string | null
+          status: Database["public"]["Enums"]["visit_status"]
+          tipo: Database["public"]["Enums"]["visit_type"]
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          analista_id: string
+          cliente_id: string
+          created_at?: string
+          descricao_situacao: string
+          id?: string
+          implantacao_id?: string | null
+          status?: Database["public"]["Enums"]["visit_status"]
+          tipo: Database["public"]["Enums"]["visit_type"]
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          analista_id?: string
+          cliente_id?: string
+          created_at?: string
+          descricao_situacao?: string
+          id?: string
+          implantacao_id?: string | null
+          status?: Database["public"]["Enums"]["visit_status"]
+          tipo?: Database["public"]["Enums"]["visit_type"]
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_implantacao_id_fkey"
+            columns: ["implantacao_id"]
+            isOneToOne: false
+            referencedRelation: "implementations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_logs: {
         Row: {
@@ -545,6 +711,13 @@ export type Database = {
         | "cancelada"
         | "agendada"
       implementation_type: "web" | "manager" | "basic"
+      interaction_origin: "usuario" | "ia"
+      knowledge_category:
+        | "produto"
+        | "treinamento"
+        | "comportamento"
+        | "processo"
+        | "comercial"
       module_type:
         | "vendas"
         | "financeiro"
@@ -553,6 +726,10 @@ export type Database = {
         | "caixa"
         | "fiscal"
         | "geral"
+      recommendation_origin: "ia" | "base_conhecimento"
+      recommendation_type: "resposta_ia" | "sugestao_servico" | "decisao"
+      visit_status: "aberta" | "analisada" | "resolvida"
+      visit_type: "visita_tecnica" | "duvida" | "diagnostico" | "oportunidade"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -697,6 +874,14 @@ export const Constants = {
         "agendada",
       ],
       implementation_type: ["web", "manager", "basic"],
+      interaction_origin: ["usuario", "ia"],
+      knowledge_category: [
+        "produto",
+        "treinamento",
+        "comportamento",
+        "processo",
+        "comercial",
+      ],
       module_type: [
         "vendas",
         "financeiro",
@@ -706,6 +891,10 @@ export const Constants = {
         "fiscal",
         "geral",
       ],
+      recommendation_origin: ["ia", "base_conhecimento"],
+      recommendation_type: ["resposta_ia", "sugestao_servico", "decisao"],
+      visit_status: ["aberta", "analisada", "resolvida"],
+      visit_type: ["visita_tecnica", "duvida", "diagnostico", "oportunidade"],
     },
   },
 } as const
