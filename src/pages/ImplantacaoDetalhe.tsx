@@ -14,11 +14,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useTimer } from "@/hooks/useTimer";
-import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer } from "lucide-react";
+import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer, SendHorizonal, CheckCircle2, XCircle } from "lucide-react";
 import { ChecklistItemCard } from "@/components/checklist/ChecklistItemCard";
 import { CommissionSelectionModal } from "@/components/commission/CommissionSelectionModal";
 import { NegotiatedTimeCard } from "@/components/implementation/NegotiatedTimeCard";
 import { WebhookService } from "@/lib/webhookService";
+import { RequestConclusionModal } from "@/components/conclusion/RequestConclusionModal";
 
 interface ChecklistItem {
   id: string;
@@ -74,6 +75,10 @@ export default function ImplantacaoDetalhe() {
   const [commissionModalOpen, setCommissionModalOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [savingCommissions, setSavingCommissions] = useState(false);
+
+  // Conclusion request state
+  const [conclusionRequestModalOpen, setConclusionRequestModalOpen] = useState(false);
+  const [conclusionRequest, setConclusionRequest] = useState<{ id: string; status: string; admin_observation: string | null } | null>(null);
 
   // Episode form state
   const [episodeDialogOpen, setEpisodeDialogOpen] = useState(false);
@@ -139,6 +144,20 @@ export default function ImplantacaoDetalhe() {
 
       if (episodesData) {
         setEpisodes(episodesData);
+      }
+
+      // Fetch latest conclusion request
+      const { data: crData } = await supabase
+        .from("conclusion_requests" as any)
+        .select("id, status, admin_observation")
+        .eq("implementation_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (crData && (crData as any[]).length > 0) {
+        setConclusionRequest((crData as any[])[0]);
+      } else {
+        setConclusionRequest(null);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -663,7 +682,36 @@ Relatorio gerado em: ${geradoEm}
                 </SelectContent>
               </Select>
             ) : (
-              getStatusBadge(implementation.status)
+              <>
+                {getStatusBadge(implementation.status)}
+                {/* Solicitar Conclusão button for implantadores */}
+                {implementation.status === "em_andamento" && (
+                  <>
+                    {conclusionRequest?.status === "pending" ? (
+                      <Badge variant="secondary">
+                        <Clock className="mr-1 h-3 w-3" />
+                        Conclusão solicitada
+                      </Badge>
+                    ) : conclusionRequest?.status === "rejected" ? (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="destructive">
+                          <XCircle className="mr-1 h-3 w-3" />
+                          Solicitação rejeitada
+                        </Badge>
+                        <Button size="sm" onClick={() => setConclusionRequestModalOpen(true)}>
+                          <SendHorizonal className="mr-1 h-3 w-3" />
+                          Solicitar novamente
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" onClick={() => setConclusionRequestModalOpen(true)}>
+                        <SendHorizonal className="mr-1 h-3 w-3" />
+                        Solicitar Conclusão
+                      </Button>
+                    )}
+                  </>
+                )}
+              </>
             )}
             <Button variant="outline" onClick={generateReport}>
               <Copy className="mr-2 h-4 w-4" />
@@ -671,6 +719,23 @@ Relatorio gerado em: ${geradoEm}
             </Button>
           </div>
         </div>
+
+        {/* Conclusion request rejected feedback */}
+        {conclusionRequest?.status === "rejected" && conclusionRequest.admin_observation && (
+          <Card className="border-destructive">
+            <CardContent className="py-3">
+              <p className="text-sm"><span className="font-medium">Motivo da rejeição:</span> {conclusionRequest.admin_observation}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Request Conclusion Modal */}
+        <RequestConclusionModal
+          open={conclusionRequestModalOpen}
+          onOpenChange={setConclusionRequestModalOpen}
+          implementationId={id!}
+          onSuccess={() => fetchData()}
+        />
 
         {/* Negotiated Time Card */}
         {implementation.negotiated_time_minutes && implementation.negotiated_time_minutes > 0 && (() => {
