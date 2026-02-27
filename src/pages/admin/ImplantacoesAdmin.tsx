@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,11 @@ interface Implementation {
 export default function ImplantacoesAdmin() {
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"todas" | "concluidas">("todas");
+
+  const filteredImplementations = statusFilter === "concluidas"
+    ? implementations.filter((impl) => impl.status === "concluida")
+    : implementations;
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -189,12 +195,40 @@ export default function ImplantacoesAdmin() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Lista de Implantações</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Lista de Implantações</CardTitle>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setStatusFilter("todas")}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-sm font-medium border transition-colors duration-150",
+                    statusFilter === "todas"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-accent"
+                  )}
+                >
+                  Todas
+                </button>
+                <button
+                  onClick={() => setStatusFilter("concluidas")}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-sm font-medium border transition-colors duration-150",
+                    statusFilter === "concluidas"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-accent"
+                  )}
+                >
+                  Concluídas
+                </button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            {implementations.length === 0 ? (
+            {filteredImplementations.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
-                Nenhuma implantação encontrada.
+                {statusFilter === "concluidas"
+                  ? "Nenhuma implantação concluída encontrada."
+                  : "Nenhuma implantação encontrada."}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -212,7 +246,7 @@ export default function ImplantacoesAdmin() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {implementations.map((impl) => {
+                    {filteredImplementations.map((impl) => {
                       const progress = getProgress(impl.checklist_items);
                       return (
                         <TableRow key={impl.id}>
