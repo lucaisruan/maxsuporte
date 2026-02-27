@@ -129,6 +129,29 @@ ${conversationHistory || "Nenhuma interação anterior."}`;
       origem: "ia",
     });
 
+    // Save to ia_recommendations for validation/feedback tracking
+    const { data: recData } = await supabase.from("ia_recommendations").insert({
+      visita_id,
+      implantacao_id: visita.implantacao_id || null,
+      generated_text: aiMessage,
+      structured_output: null,
+      confidence_score: null,
+      status: "generated",
+      created_by: user.id,
+      current_version: 1,
+    }).select("id").single();
+
+    // Save initial version
+    if (recData) {
+      await supabase.from("ia_recommendation_versions").insert({
+        recommendation_id: recData.id,
+        version_number: 1,
+        content: aiMessage,
+        edited_by: user.id,
+        edit_reason: "Geração inicial pela IA",
+      });
+    }
+
     // Update visit status to analyzed if it was open
     if (visita.status === "aberta") {
       await supabase.from("visitas").update({ status: "analisada" }).eq("id", visita_id);

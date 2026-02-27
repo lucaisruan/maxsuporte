@@ -24,6 +24,7 @@ import NovaVisita from "./pages/visitas/NovaVisita";
 import VisitaDetalhe from "./pages/visitas/VisitaDetalhe";
 import BaseConhecimentoIA from "./pages/admin/BaseConhecimentoIA";
 import GuiaVisitas from "./pages/visitas/GuiaVisitas";
+import MetricasIA from "./pages/admin/MetricasIA";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -201,6 +202,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <GuiaVisitas />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/metricas-ia"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <MetricasIA />
           </ProtectedRoute>
         }
       />

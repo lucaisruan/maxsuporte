@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { ArrowLeft, Send, Bot, User, CheckCircle, Lightbulb } from "lucide-react";
+import { AIRecommendationCard } from "@/components/visitas/AIRecommendationCard";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -200,6 +201,9 @@ export default function VisitaDetalhe() {
             </CardContent>
           </Card>
         )}
+
+        {/* AI Recommendations with Feedback/Correction/Rollback */}
+        <AIRecommendationCard visitaId={id!} />
 
         {/* Chat */}
         <Card className="flex flex-col">
