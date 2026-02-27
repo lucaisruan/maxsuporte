@@ -60,13 +60,13 @@ export function Sidebar({
     icon: Brain,
     label: "Base Conhecimento IA"
   }, {
-    to: "/admin/guia-visitas",
-    icon: BookOpen,
-    label: "Guia Visitas"
-  }, {
     to: "/admin/metricas-ia",
     icon: Bot,
     label: "Métricas IA"
+  }, {
+    to: "/admin/guia-visitas",
+    icon: BookOpen,
+    label: "Guia Visitas"
   }];
   const implantadorLinks = [{
     to: "/implantador",
