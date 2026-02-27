@@ -56,6 +56,10 @@ export function Sidebar({
     icon: MessageSquare,
     label: "Visitas"
   }, {
+    to: "/admin/guia-visitas",
+    icon: BookOpen,
+    label: "Guia Visitas"
+  }, {
     to: "/admin/base-conhecimento",
     icon: Brain,
     label: "Base Conhecimento IA"
@@ -63,10 +67,6 @@ export function Sidebar({
     to: "/admin/metricas-ia",
     icon: Bot,
     label: "Métricas IA"
-  }, {
-    to: "/admin/guia-visitas",
-    icon: BookOpen,
-    label: "Guia Visitas"
   }];
   const implantadorLinks = [{
     to: "/implantador",
