@@ -306,6 +306,166 @@ export type Database = {
           },
         ]
       }
+      ia_feedback: {
+        Row: {
+          created_at: string
+          feedback_comment: string | null
+          id: string
+          rating: Database["public"]["Enums"]["feedback_rating"]
+          recommendation_id: string
+          suggested_correction: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_comment?: string | null
+          id?: string
+          rating: Database["public"]["Enums"]["feedback_rating"]
+          recommendation_id: string
+          suggested_correction?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback_comment?: string | null
+          id?: string
+          rating?: Database["public"]["Enums"]["feedback_rating"]
+          recommendation_id?: string
+          suggested_correction?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_feedback_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "ia_recommendations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_recommendation_versions: {
+        Row: {
+          content: string
+          created_at: string
+          edit_reason: string | null
+          edited_by: string
+          id: string
+          recommendation_id: string
+          version_number: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          edit_reason?: string | null
+          edited_by: string
+          id?: string
+          recommendation_id: string
+          version_number: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          edit_reason?: string | null
+          edited_by?: string
+          id?: string
+          recommendation_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_recommendation_versions_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "ia_recommendations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_recommendations: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          created_by: string
+          current_version: number
+          generated_text: string
+          id: string
+          implantacao_id: string | null
+          status: Database["public"]["Enums"]["recommendation_status"]
+          structured_output: Json | null
+          visita_id: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          created_by: string
+          current_version?: number
+          generated_text: string
+          id?: string
+          implantacao_id?: string | null
+          status?: Database["public"]["Enums"]["recommendation_status"]
+          structured_output?: Json | null
+          visita_id: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          created_by?: string
+          current_version?: number
+          generated_text?: string
+          id?: string
+          implantacao_id?: string | null
+          status?: Database["public"]["Enums"]["recommendation_status"]
+          structured_output?: Json | null
+          visita_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_recommendations_implantacao_id_fkey"
+            columns: ["implantacao_id"]
+            isOneToOne: false
+            referencedRelation: "implementations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_recommendations_visita_id_fkey"
+            columns: ["visita_id"]
+            isOneToOne: false
+            referencedRelation: "visitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_training_dataset: {
+        Row: {
+          corrected_output: string
+          created_at: string
+          error_type: string | null
+          id: string
+          input_context: Json
+          original_output: string
+          validated_by: string
+        }
+        Insert: {
+          corrected_output: string
+          created_at?: string
+          error_type?: string | null
+          id?: string
+          input_context: Json
+          original_output: string
+          validated_by: string
+        }
+        Update: {
+          corrected_output?: string
+          created_at?: string
+          error_type?: string | null
+          id?: string
+          input_context?: Json
+          original_output?: string
+          validated_by?: string
+        }
+        Relationships: []
+      }
       implementation_analysts: {
         Row: {
           analyst_id: string
@@ -674,6 +834,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_ai_quality_score: {
+        Args: never
+        Returns: {
+          avg_score: number
+          correction_rate: number
+          incorrect_pct: number
+          irrelevant_pct: number
+          partially_useful_pct: number
+          total_recommendations: number
+          useful_pct: number
+        }[]
+      }
       create_default_checklist: {
         Args: { impl_id: string }
         Returns: undefined
@@ -704,6 +876,11 @@ export type Database = {
         | "ajuste_fiscal"
         | "migracao"
         | "instalacao"
+      feedback_rating:
+        | "useful"
+        | "partially_useful"
+        | "irrelevant"
+        | "incorrect"
       implementation_status:
         | "em_andamento"
         | "pausada"
@@ -727,6 +904,11 @@ export type Database = {
         | "fiscal"
         | "geral"
       recommendation_origin: "ia" | "base_conhecimento"
+      recommendation_status:
+        | "generated"
+        | "validated"
+        | "corrected"
+        | "rolled_back"
       recommendation_type: "resposta_ia" | "sugestao_servico" | "decisao"
       visit_status: "aberta" | "analisada" | "resolvida"
       visit_type: "visita_tecnica" | "duvida" | "diagnostico" | "oportunidade"
@@ -866,6 +1048,12 @@ export const Constants = {
         "migracao",
         "instalacao",
       ],
+      feedback_rating: [
+        "useful",
+        "partially_useful",
+        "irrelevant",
+        "incorrect",
+      ],
       implementation_status: [
         "em_andamento",
         "pausada",
@@ -892,6 +1080,12 @@ export const Constants = {
         "geral",
       ],
       recommendation_origin: ["ia", "base_conhecimento"],
+      recommendation_status: [
+        "generated",
+        "validated",
+        "corrected",
+        "rolled_back",
+      ],
       recommendation_type: ["resposta_ia", "sugestao_servico", "decisao"],
       visit_status: ["aberta", "analisada", "resolvida"],
       visit_type: ["visita_tecnica", "duvida", "diagnostico", "oportunidade"],
