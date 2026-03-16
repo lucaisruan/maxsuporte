@@ -26,6 +26,7 @@ interface DemandStep {
   corrective_action: string | null;
   earned_score: number;
   evidences: { id: string; file_path: string; file_name: string }[];
+  template_image_path: string | null;
 }
 
 interface DemandDetail {
