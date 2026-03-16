@@ -60,7 +60,6 @@ export default function Cadastro() {
           <CardDescription>
             Cadastre-se como Analista no MAX IMPLANTAÇÕES
           </CardDescription>
-          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSignUp}>
           <CardContent className="space-y-4">
