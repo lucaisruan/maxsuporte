@@ -67,7 +67,7 @@ export default function DemandaDetalhe() {
         *,
         demand_templates(name),
         demand_analysts(profiles:analyst_id(name)),
-        demand_steps(*, demand_step_evidences(*))
+        demand_steps(*, demand_template_steps(image_path), demand_step_evidences(*))
       `)
       .eq("id", id!)
       .single();
