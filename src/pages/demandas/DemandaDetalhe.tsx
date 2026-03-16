@@ -353,6 +353,18 @@ export default function DemandaDetalhe() {
                     </div>
                   </div>
 
+                  {/* Template reference image */}
+                  {step.template_image_path && (
+                    <div className="pt-1">
+                      <Label className="text-xs text-muted-foreground">Imagem de Referência</Label>
+                      <img
+                        src={supabase.storage.from("demand-evidences").getPublicUrl(step.template_image_path).data.publicUrl}
+                        alt={`Referência - ${step.title}`}
+                        className="mt-1 max-h-48 w-auto rounded-lg border object-contain"
+                      />
+                    </div>
+                  )}
+
                   {/* Action buttons */}
                   {!step.is_completed && demand.status !== "concluida" && (
                     <div className="flex gap-2 pt-2">
