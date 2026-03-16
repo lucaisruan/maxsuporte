@@ -250,6 +250,269 @@ export type Database = {
           },
         ]
       }
+      demand_analysts: {
+        Row: {
+          analyst_id: string
+          created_at: string
+          demand_id: string
+          id: string
+        }
+        Insert: {
+          analyst_id: string
+          created_at?: string
+          demand_id: string
+          id?: string
+        }
+        Update: {
+          analyst_id?: string
+          created_at?: string
+          demand_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_analysts_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "demands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_step_evidences: {
+        Row: {
+          created_at: string
+          demand_step_id: string
+          file_name: string
+          file_path: string
+          id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          demand_step_id: string
+          file_name: string
+          file_path: string
+          id?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          demand_step_id?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_step_evidences_demand_step_id_fkey"
+            columns: ["demand_step_id"]
+            isOneToOne: false
+            referencedRelation: "demand_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_steps: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          corrective_action: string | null
+          created_at: string
+          demand_id: string
+          earned_score: number
+          id: string
+          instructions: string | null
+          is_completed: boolean
+          observation: string | null
+          order_index: number
+          response_type: Database["public"]["Enums"]["demand_step_response_type"]
+          result: string | null
+          score: number
+          template_step_id: string
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          corrective_action?: string | null
+          created_at?: string
+          demand_id: string
+          earned_score?: number
+          id?: string
+          instructions?: string | null
+          is_completed?: boolean
+          observation?: string | null
+          order_index: number
+          response_type?: Database["public"]["Enums"]["demand_step_response_type"]
+          result?: string | null
+          score?: number
+          template_step_id: string
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          corrective_action?: string | null
+          created_at?: string
+          demand_id?: string
+          earned_score?: number
+          id?: string
+          instructions?: string | null
+          is_completed?: boolean
+          observation?: string | null
+          order_index?: number
+          response_type?: Database["public"]["Enums"]["demand_step_response_type"]
+          result?: string | null
+          score?: number
+          template_step_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_steps_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "demands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_steps_template_step_id_fkey"
+            columns: ["template_step_id"]
+            isOneToOne: false
+            referencedRelation: "demand_template_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_template_steps: {
+        Row: {
+          created_at: string
+          id: string
+          instructions: string | null
+          order_index: number
+          response_type: Database["public"]["Enums"]["demand_step_response_type"]
+          score: number
+          template_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          order_index: number
+          response_type?: Database["public"]["Enums"]["demand_step_response_type"]
+          score?: number
+          template_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          order_index?: number
+          response_type?: Database["public"]["Enums"]["demand_step_response_type"]
+          score?: number
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_template_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "demand_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_templates: {
+        Row: {
+          base_score: number
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          base_score?: number
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          base_score?: number
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      demands: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          deadline: string | null
+          description: string | null
+          id: string
+          max_score: number
+          status: Database["public"]["Enums"]["demand_status"]
+          template_id: string
+          title: string
+          total_score: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          max_score?: number
+          status?: Database["public"]["Enums"]["demand_status"]
+          template_id: string
+          title: string
+          total_score?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          max_score?: number
+          status?: Database["public"]["Enums"]["demand_status"]
+          template_id?: string
+          title?: string
+          total_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demands_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "demand_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       episodes: {
         Row: {
           created_at: string
@@ -692,6 +955,33 @@ export type Database = {
           },
         ]
       }
+      user_module_permissions: {
+        Row: {
+          created_at: string
+          has_access: boolean
+          id: string
+          module: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          has_access?: boolean
+          id?: string
+          module: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          has_access?: boolean
+          id?: string
+          module?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -870,6 +1160,8 @@ export type Database = {
     Enums: {
       app_role: "admin" | "implantador"
       conclusion_request_status: "pending" | "approved" | "rejected"
+      demand_status: "pendente" | "em_andamento" | "concluida" | "atrasada"
+      demand_step_response_type: "ok_falha" | "sim_nao" | "texto_livre"
       episode_type:
         | "treinamento"
         | "parametrizacao"
@@ -1041,6 +1333,8 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "implantador"],
       conclusion_request_status: ["pending", "approved", "rejected"],
+      demand_status: ["pendente", "em_andamento", "concluida", "atrasada"],
+      demand_step_response_type: ["ok_falha", "sim_nao", "texto_livre"],
       episode_type: [
         "treinamento",
         "parametrizacao",
