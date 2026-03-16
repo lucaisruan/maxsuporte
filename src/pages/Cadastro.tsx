@@ -58,7 +58,8 @@ export default function Cadastro() {
           
           <CardTitle className="text-2xl">Criar Conta</CardTitle>
           <CardDescription>
-            Cadastre-se como Implantador no MAX IMPLANTAÇÕES
+            Cadastre-se como Analista no MAX IMPLANTAÇÕES
+          </CardDescription>
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSignUp}>
