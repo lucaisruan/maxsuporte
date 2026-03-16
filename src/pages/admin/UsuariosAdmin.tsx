@@ -5,8 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, UserCheck, UserX } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, UserCheck, UserX, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getRoleLabel, MODULE_LABELS, ALL_MODULES } from "@/lib/roleLabels";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface UserWithRole {
   id: string;
@@ -18,10 +27,18 @@ interface UserWithRole {
   created_at: string;
 }
 
+interface ModulePermission {
+  module: string;
+  has_access: boolean;
+}
+
 export default function UsuariosAdmin() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingUser, setUpdatingUser] = useState<string | null>(null);
+  const [permissionsUser, setPermissionsUser] = useState<UserWithRole | null>(null);
+  const [permissions, setPermissions] = useState<ModulePermission[]>([]);
+  const [savingPermissions, setSavingPermissions] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,13 +102,63 @@ export default function UsuariosAdmin() {
           : "O usuário pode acessar o sistema novamente.",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar usuário",
-        description: error.message,
-      });
+      toast({ variant: "destructive", title: "Erro ao atualizar usuário", description: error.message });
     } finally {
       setUpdatingUser(null);
+    }
+  };
+
+  const openPermissions = async (user: UserWithRole) => {
+    setPermissionsUser(user);
+
+    const { data } = await supabase
+      .from("user_module_permissions")
+      .select("module, has_access")
+      .eq("user_id", user.user_id);
+
+    const existingMap = new Map(data?.map((p) => [p.module, p.has_access]) || []);
+
+    setPermissions(
+      ALL_MODULES.map((m) => ({
+        module: m,
+        has_access: existingMap.has(m) ? existingMap.get(m)! : true,
+      }))
+    );
+  };
+
+  const togglePermission = (module: string) => {
+    setPermissions((prev) =>
+      prev.map((p) => (p.module === module ? { ...p, has_access: !p.has_access } : p))
+    );
+  };
+
+  const savePermissions = async () => {
+    if (!permissionsUser) return;
+    setSavingPermissions(true);
+
+    try {
+      // Delete existing and re-insert
+      await supabase
+        .from("user_module_permissions")
+        .delete()
+        .eq("user_id", permissionsUser.user_id);
+
+      const { error } = await supabase.from("user_module_permissions").insert(
+        permissions.map((p) => ({
+          user_id: permissionsUser.user_id,
+          module: p.module,
+          has_access: p.has_access,
+        }))
+      );
+
+      if (error) throw error;
+
+      toast({ title: "Permissões salvas!" });
+      setPermissionsUser(null);
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Erro", description: error.message });
+    } finally {
+      setSavingPermissions(false);
     }
   };
 
@@ -164,24 +231,16 @@ export default function UsuariosAdmin() {
                   <div
                     key={user.id}
                     className={`flex items-center justify-between rounded-lg border p-4 ${
-                      user.is_active
-                        ? "border-border"
-                        : "border-destructive/30 bg-destructive/5"
+                      user.is_active ? "border-border" : "border-destructive/30 bg-destructive/5"
                     }`}
                   >
                     <div className="flex items-center gap-4">
                       <div
                         className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          user.is_active
-                            ? "bg-primary/10 text-primary"
-                            : "bg-destructive/10 text-destructive"
+                          user.is_active ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
                         }`}
                       >
-                        {user.is_active ? (
-                          <UserCheck className="h-5 w-5" />
-                        ) : (
-                          <UserX className="h-5 w-5" />
-                        )}
+                        {user.is_active ? <UserCheck className="h-5 w-5" /> : <UserX className="h-5 w-5" />}
                       </div>
                       <div>
                         <h3 className="font-medium text-foreground">{user.name}</h3>
@@ -191,12 +250,20 @@ export default function UsuariosAdmin() {
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col items-end gap-1">
                         <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                          {user.role === "admin" ? "Administrador" : "Implantador"}
+                          {getRoleLabel(user.role)}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           {new Date(user.created_at).toLocaleDateString("pt-BR")}
                         </span>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openPermissions(user)}
+                        title="Configurar permissões"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
                       {user.role !== "admin" && (
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">
@@ -220,6 +287,38 @@ export default function UsuariosAdmin() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Permissions Dialog */}
+      <Dialog open={!!permissionsUser} onOpenChange={(open) => !open && setPermissionsUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Permissões de Módulo</DialogTitle>
+            <DialogDescription>
+              Configure o acesso de {permissionsUser?.name} aos módulos do sistema
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            {permissions.map((p) => (
+              <div key={p.module} className="flex items-center justify-between rounded-lg border p-3">
+                <span className="text-sm font-medium">{MODULE_LABELS[p.module] || p.module}</span>
+                <Checkbox
+                  checked={p.has_access}
+                  onCheckedChange={() => togglePermission(p.module)}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setPermissionsUser(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={savePermissions} disabled={savingPermissions}>
+              {savingPermissions && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

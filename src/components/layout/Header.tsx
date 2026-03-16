@@ -1,4 +1,5 @@
 import { useAuth } from "@/lib/auth";
+import { getRoleLabel } from "@/lib/roleLabels";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -56,7 +57,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 </div>
                 <div className="hidden text-left md:block">
                   <p className="text-sm font-medium leading-tight text-foreground">{profile?.name}</p>
-                  <p className="text-[11px] text-muted-foreground capitalize">{role}</p>
+                  <p className="text-[11px] text-muted-foreground">{getRoleLabel(role || "")}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
