@@ -90,6 +90,7 @@ export default function DemandaDetalhe() {
           .map((s: any) => ({
             ...s,
             evidences: s.demand_step_evidences || [],
+            template_image_path: s.demand_template_steps?.image_path || null,
           })),
       });
     }
