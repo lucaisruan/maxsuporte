@@ -26,6 +26,7 @@ interface DemandStep {
   corrective_action: string | null;
   earned_score: number;
   evidences: { id: string; file_path: string; file_name: string }[];
+  template_image_path: string | null;
 }
 
 interface DemandDetail {
@@ -66,7 +67,7 @@ export default function DemandaDetalhe() {
         *,
         demand_templates(name),
         demand_analysts(profiles:analyst_id(name)),
-        demand_steps(*, demand_step_evidences(*))
+        demand_steps(*, demand_template_steps(image_path), demand_step_evidences(*))
       `)
       .eq("id", id!)
       .single();
@@ -89,6 +90,7 @@ export default function DemandaDetalhe() {
           .map((s: any) => ({
             ...s,
             evidences: s.demand_step_evidences || [],
+            template_image_path: s.demand_template_steps?.image_path || null,
           })),
       });
     }
@@ -350,6 +352,18 @@ export default function DemandaDetalhe() {
                       )}
                     </div>
                   </div>
+
+                  {/* Template reference image */}
+                  {step.template_image_path && (
+                    <div className="pt-1">
+                      <Label className="text-xs text-muted-foreground">Imagem de Referência</Label>
+                      <img
+                        src={supabase.storage.from("demand-evidences").getPublicUrl(step.template_image_path).data.publicUrl}
+                        alt={`Referência - ${step.title}`}
+                        className="mt-1 max-h-48 w-auto rounded-lg border object-contain"
+                      />
+                    </div>
+                  )}
 
                   {/* Action buttons */}
                   {!step.is_completed && demand.status !== "concluida" && (
