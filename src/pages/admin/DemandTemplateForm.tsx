@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Trash2, GripVertical, ArrowLeft } from "lucide-react";
+import { Loader2, Plus, Trash2, GripVertical, ArrowLeft, Upload, X, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Step {
@@ -19,6 +19,9 @@ interface Step {
   instructions: string;
   response_type: "ok_falha" | "sim_nao" | "texto_livre";
   score: number;
+  image_path: string | null;
+  image_file?: File | null;      // local file pending upload
+  image_preview?: string | null;  // local preview URL
 }
 
 export default function DemandTemplateForm() {
@@ -27,6 +30,8 @@ export default function DemandTemplateForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -66,6 +71,7 @@ export default function DemandTemplateForm() {
         instructions: s.instructions || "",
         response_type: s.response_type,
         score: s.score,
+        image_path: s.image_path || null,
       })));
     }
     setFetching(false);
@@ -80,6 +86,7 @@ export default function DemandTemplateForm() {
         instructions: "",
         response_type: "ok_falha",
         score: 0,
+        image_path: null,
       },
     ]);
   };
@@ -91,9 +98,61 @@ export default function DemandTemplateForm() {
   };
 
   const removeStep = (index: number) => {
+    // Revoke preview URL if exists
+    const step = steps[index];
+    if (step.image_preview) URL.revokeObjectURL(step.image_preview);
     setSteps((prev) =>
       prev.filter((_, i) => i !== index).map((s, i) => ({ ...s, order_index: i + 1 }))
     );
+  };
+
+  const handleImageSelect = (index: number) => {
+    setActiveStepIndex(index);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || activeStepIndex === null) return;
+
+    // Validate file type
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      toast({ variant: "destructive", title: "Formato inválido", description: "Apenas PNG e JPEG são permitidos." });
+      e.target.value = "";
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "Arquivo muito grande", description: "Máximo de 5MB." });
+      e.target.value = "";
+      return;
+    }
+
+    const preview = URL.createObjectURL(file);
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === activeStepIndex
+          ? { ...s, image_file: file, image_preview: preview, image_path: null }
+          : s
+      )
+    );
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    const step = steps[index];
+    if (step.image_preview) URL.revokeObjectURL(step.image_preview);
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === index ? { ...s, image_file: null, image_preview: null, image_path: null } : s
+      )
+    );
+  };
+
+  const getPublicUrl = (path: string) => {
+    const { data } = supabase.storage.from("demand-evidences").getPublicUrl(path);
+    return data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,7 +170,6 @@ export default function DemandTemplateForm() {
           .eq("id", id!);
         if (error) throw error;
 
-        // Delete old steps and re-insert
         await supabase.from("demand_template_steps").delete().eq("template_id", id!);
       } else {
         const { data, error } = await supabase
@@ -123,17 +181,35 @@ export default function DemandTemplateForm() {
         templateId = data.id;
       }
 
-      if (steps.length > 0) {
-        const { error } = await supabase.from("demand_template_steps").insert(
-          steps.map((s, i) => ({
+      // Upload images for steps that have new files
+      const stepsToInsert = await Promise.all(
+        steps.map(async (s, i) => {
+          let imagePath = s.image_path;
+
+          if (s.image_file) {
+            const ext = s.image_file.name.split(".").pop();
+            const path = `templates/${templateId}/${i + 1}_${Date.now()}.${ext}`;
+            const { error: uploadErr } = await supabase.storage
+              .from("demand-evidences")
+              .upload(path, s.image_file);
+            if (uploadErr) throw uploadErr;
+            imagePath = path;
+          }
+
+          return {
             template_id: templateId!,
             order_index: i + 1,
             title: s.title,
             instructions: s.instructions || null,
             response_type: s.response_type,
             score: s.score,
-          }))
-        );
+            image_path: imagePath,
+          };
+        })
+      );
+
+      if (stepsToInsert.length > 0) {
+        const { error } = await supabase.from("demand_template_steps").insert(stepsToInsert);
         if (error) throw error;
       }
 
@@ -212,10 +288,7 @@ export default function DemandTemplateForm() {
                 </p>
               )}
               {steps.map((step, index) => (
-                <div
-                  key={index}
-                  className="rounded-lg border p-4 space-y-3"
-                >
+                <div key={index} className="rounded-lg border p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -223,12 +296,7 @@ export default function DemandTemplateForm() {
                         Passo {index + 1}
                       </span>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeStep(index)}
-                    >
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeStep(index)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -277,6 +345,39 @@ export default function DemandTemplateForm() {
                       rows={2}
                     />
                   </div>
+
+                  {/* Image upload */}
+                  <div className="space-y-2">
+                    <Label>Imagem de Referência</Label>
+                    {step.image_preview || step.image_path ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={step.image_preview || getPublicUrl(step.image_path!)}
+                          alt={`Imagem passo ${index + 1}`}
+                          className="h-32 w-auto rounded-lg border object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -right-2 -top-2 h-6 w-6 rounded-full"
+                          onClick={() => removeImage(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleImageSelect(index)}
+                      >
+                        <Upload className="mr-1 h-4 w-4" />
+                        Anexar Imagem (PNG/JPEG)
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -292,6 +393,15 @@ export default function DemandTemplateForm() {
             </Button>
           </div>
         </form>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
     </DashboardLayout>
   );

@@ -390,6 +390,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          image_path: string | null
           instructions: string | null
           order_index: number
           response_type: Database["public"]["Enums"]["demand_step_response_type"]
@@ -400,6 +401,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          image_path?: string | null
           instructions?: string | null
           order_index: number
           response_type?: Database["public"]["Enums"]["demand_step_response_type"]
@@ -410,6 +412,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          image_path?: string | null
           instructions?: string | null
           order_index?: number
           response_type?: Database["public"]["Enums"]["demand_step_response_type"]
