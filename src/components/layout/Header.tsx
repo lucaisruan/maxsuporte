@@ -1,4 +1,5 @@
 import { useAuth } from "@/lib/auth";
+import { getRoleLabel } from "@/lib/roleLabels";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
