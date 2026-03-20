@@ -43,7 +43,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           <div className="flex items-center gap-2.5">
             <img src={logo} alt="MAX IMPLANTAÇÕES" className="h-8 w-8 rounded object-contain" />
             <span className="text-lg font-semibold tracking-tight text-foreground">
-              MAX IMPLANTAÇÕES
+              MAX SUPORTE
             </span>
           </div>
         </div>
