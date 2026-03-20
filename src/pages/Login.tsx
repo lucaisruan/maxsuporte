@@ -85,9 +85,9 @@ export default function Login() {
           <div className="mx-auto mb-4">
             <img src={logo} alt="MAX IMPLANTAÇÕES" className="h-16 w-16 object-contain" />
           </div>
-          <CardTitle className="text-2xl">MAX IMPLANTAÇÕES</CardTitle>
+          <CardTitle className="text-2xl">MAX SUPORTE</CardTitle>
           <CardDescription>
-            Sistema de Controle de Implantações ERP
+            Sistema para analistas
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
