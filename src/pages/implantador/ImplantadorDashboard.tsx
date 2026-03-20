@@ -166,7 +166,7 @@ export default function ImplantadorDashboard() {
             ) : (
               <div className="space-y-3">
                 {implementations.map((impl) => {
-                  const progress = getProgress(impl.checklist_items);
+                  const progress = getProgress(impl);
                   return (
                     <Link
                       key={impl.id}

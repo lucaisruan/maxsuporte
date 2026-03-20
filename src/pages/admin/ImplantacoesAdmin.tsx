@@ -253,7 +253,7 @@ export default function ImplantacoesAdmin() {
                   </TableHeader>
                   <TableBody>
                     {filteredImplementations.map((impl) => {
-                      const progress = getProgress(impl.checklist_items);
+                      const progress = getProgress(impl);
                       return (
                         <TableRow key={impl.id}>
                           <TableCell className="font-medium">
