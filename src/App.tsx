@@ -32,6 +32,7 @@ import NovaDemanda from "./pages/demandas/NovaDemanda";
 import DemandaDetalhe from "./pages/demandas/DemandaDetalhe";
 import RelatorioDemandas from "./pages/admin/RelatorioDemandas";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ function AppRoutes() {
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={user ? <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace /> : <Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/cadastro" element={user ? <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace /> : <Cadastro />} />
       <Route path="/" element={user ? <Navigate to={role === "admin" ? "/admin" : "/implantador"} replace /> : <Navigate to="/login" replace />} />
 
