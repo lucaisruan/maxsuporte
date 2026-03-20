@@ -196,7 +196,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <p className="text-xs text-sidebar-accent-foreground">
               {getRoleLabel(role || "")}
             </p>
-            <p className="mt-1 text-xs text-sidebar-accent-foreground/70">MAX IMPLANTAÇÕES</p>
+            <p className="mt-1 text-xs text-sidebar-accent-foreground/70">MAX SUPORTE</p>
           </div>
         </div>
       </aside>
