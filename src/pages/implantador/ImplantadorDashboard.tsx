@@ -16,8 +16,9 @@ interface Implementation {
   start_date: string;
   total_time_minutes: number;
   negotiated_time_minutes: number | null;
+  has_data_migration: boolean;
   client: { name: string } | null;
-  checklist_items: { is_completed: boolean }[];
+  checklist_items: { is_completed: boolean; title: string }[];
 }
 
 export default function ImplantadorDashboard() {
@@ -49,8 +50,9 @@ export default function ImplantadorDashboard() {
           start_date,
           total_time_minutes,
           negotiated_time_minutes,
+          has_data_migration,
           client:clients(name),
-          checklist_items(is_completed)
+          checklist_items(is_completed,title)
         `)
         .order("created_at", { ascending: false });
 
@@ -73,8 +75,12 @@ export default function ImplantadorDashboard() {
     }
   };
 
-  const getProgress = (items: { is_completed: boolean }[]) => {
-    if (!items || items.length === 0) return 0;
+  const getProgress = (impl: Implementation) => {
+    const items = impl.checklist_items?.filter((item) => {
+      if (item.title === "Migração de Dados" && !impl.has_data_migration) return false;
+      return true;
+    }) || [];
+    if (items.length === 0) return 0;
     const completed = items.filter((item) => item.is_completed).length;
     return Math.round((completed / items.length) * 100);
   };
@@ -160,7 +166,7 @@ export default function ImplantadorDashboard() {
             ) : (
               <div className="space-y-3">
                 {implementations.map((impl) => {
-                  const progress = getProgress(impl.checklist_items);
+                  const progress = getProgress(impl);
                   return (
                     <Link
                       key={impl.id}

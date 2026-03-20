@@ -24,10 +24,11 @@ interface Implementation {
   start_date: string;
   total_time_minutes: number;
   negotiated_time_minutes: number | null;
+  has_data_migration: boolean;
   client: { name: string } | null;
   analysts: string[];
   commission_type: { name: string } | null;
-  checklist_items: { is_completed: boolean }[];
+  checklist_items: { is_completed: boolean; title: string }[];
 }
 
 export default function ImplantacoesAdmin() {
@@ -55,10 +56,11 @@ export default function ImplantacoesAdmin() {
           start_date,
           total_time_minutes,
           negotiated_time_minutes,
+          has_data_migration,
           implementer_id,
           client:clients(name),
           commission_type:commission_types(name),
-          checklist_items(is_completed)
+          checklist_items(is_completed,title)
         `)
         .order("created_at", { ascending: false });
 
@@ -143,8 +145,12 @@ export default function ImplantacoesAdmin() {
     }
   };
 
-  const getProgress = (items: { is_completed: boolean }[]) => {
-    if (!items || items.length === 0) return 0;
+  const getProgress = (impl: Implementation) => {
+    const items = impl.checklist_items?.filter((item) => {
+      if (item.title === "Migração de Dados" && !impl.has_data_migration) return false;
+      return true;
+    }) || [];
+    if (items.length === 0) return 0;
     const completed = items.filter((item) => item.is_completed).length;
     return Math.round((completed / items.length) * 100);
   };
@@ -247,7 +253,7 @@ export default function ImplantacoesAdmin() {
                   </TableHeader>
                   <TableBody>
                     {filteredImplementations.map((impl) => {
-                      const progress = getProgress(impl.checklist_items);
+                      const progress = getProgress(impl);
                       return (
                         <TableRow key={impl.id}>
                           <TableCell className="font-medium">

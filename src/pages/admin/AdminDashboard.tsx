@@ -18,9 +18,10 @@ interface Implementation {
   start_date: string;
   total_time_minutes: number;
   negotiated_time_minutes: number | null;
+  has_data_migration: boolean;
   client: { name: string } | null;
   analysts: string[];
-  checklist_items: { is_completed: boolean }[];
+  checklist_items: { is_completed: boolean; title: string }[];
 }
 
 interface Stats {
@@ -48,8 +49,8 @@ export default function AdminDashboard() {
         .from("implementations")
         .select(`
           id, status, implementation_type, start_date,
-          total_time_minutes, negotiated_time_minutes, implementer_id,
-          client:clients(name), checklist_items(is_completed)
+          total_time_minutes, negotiated_time_minutes, has_data_migration, implementer_id,
+          client:clients(name), checklist_items(is_completed,title)
         `)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -120,8 +121,12 @@ export default function AdminDashboard() {
     }
   };
 
-  const getProgress = (items: { is_completed: boolean }[]) => {
-    if (!items || items.length === 0) return 0;
+  const getProgress = (impl: Implementation) => {
+    const items = impl.checklist_items?.filter((item) => {
+      if (item.title === "Migração de Dados" && !impl.has_data_migration) return false;
+      return true;
+    }) || [];
+    if (items.length === 0) return 0;
     return Math.round((items.filter(i => i.is_completed).length / items.length) * 100);
   };
 
@@ -210,7 +215,7 @@ export default function AdminDashboard() {
             ) : (
               <div className="space-y-3">
                 {implementations.map((impl) => {
-                  const progress = getProgress(impl.checklist_items);
+                  const progress = getProgress(impl);
                   return (
                     <Link
                       key={impl.id}
