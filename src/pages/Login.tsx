@@ -127,6 +127,7 @@ export default function Login() {
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Entrar
             </Button>
+            <ForgotPasswordDialog />
             <p className="text-center text-sm text-muted-foreground">
               Não tem uma conta?{" "}
               <Link to="/cadastro" className="font-medium text-primary hover:underline">
