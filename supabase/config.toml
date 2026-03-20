@@ -1,10 +1,1 @@
-project_id = "sciaukqtkeboufvqxdus"
-
-[functions.validate-site-access]
-verify_jwt = false
-
-[functions.send-webhook]
-verify_jwt = false
-
-[functions.analyze-visit]
-verify_jwt = false
+project_id = "ryqxazrzbokgrljfflew"
