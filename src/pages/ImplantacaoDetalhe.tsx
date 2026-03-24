@@ -816,7 +816,7 @@ Relatorio gerado em: ${geradoEm}
 
   const canEditEpisode = (episode: Episode) => {
     if (role === "admin") return true;
-    if (episode.created_by === user?.id) return true;
+    if (user?.id && episode.created_by === user.id) return true;
     return false;
   };
 
