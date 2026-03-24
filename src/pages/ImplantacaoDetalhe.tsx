@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useTimer } from "@/hooks/useTimer";
-import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer, SendHorizonal, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Plus, Clock, Copy, Play, Square, Timer, SendHorizonal, CheckCircle2, XCircle, Pencil, History, User } from "lucide-react";
 import { ChecklistItemCard } from "@/components/checklist/ChecklistItemCard";
 import { CommissionSelectionModal } from "@/components/commission/CommissionSelectionModal";
 import { NegotiatedTimeCard } from "@/components/implementation/NegotiatedTimeCard";
@@ -41,6 +41,17 @@ interface Episode {
   end_time: string;
   time_spent_minutes: number;
   observations: string | null;
+  created_by: string | null;
+}
+
+interface AuditLog {
+  id: string;
+  field_changed: string;
+  old_value: string | null;
+  new_value: string | null;
+  edited_at: string;
+  edited_by: string;
+  editor_name?: string;
 }
 
 interface Implementation {
@@ -71,6 +82,9 @@ export default function ImplantacaoDetalhe() {
   const [savingItem, setSavingItem] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
+  // Profile map for creator names
+  const [profileMap, setProfileMap] = useState<Record<string, string>>({});
+
   // Commission modal state
   const [commissionModalOpen, setCommissionModalOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
@@ -82,6 +96,7 @@ export default function ImplantacaoDetalhe() {
 
   // Episode form state
   const [episodeDialogOpen, setEpisodeDialogOpen] = useState(false);
+  const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
   const [episodeType, setEpisodeType] = useState<string>("");
   const [episodeModule, setEpisodeModule] = useState<string>("");
   const [trainedClients, setTrainedClients] = useState("");
@@ -91,6 +106,12 @@ export default function ImplantacaoDetalhe() {
   const [episodeObservations, setEpisodeObservations] = useState("");
   const [savingEpisode, setSavingEpisode] = useState(false);
   const [useTimerMode, setUseTimerMode] = useState(false);
+
+  // Audit history state
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [auditEpisodeId, setAuditEpisodeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -134,16 +155,31 @@ export default function ImplantacaoDetalhe() {
         setChecklistItems(checklistData);
       }
 
-      // Fetch episodes
+      // Fetch episodes (including created_by)
       const { data: episodesData } = await supabase
         .from("episodes")
-        .select("*")
+        .select("id, episode_type, module, trained_clients, episode_date, start_time, end_time, time_spent_minutes, observations, created_by")
         .eq("implementation_id", id)
         .order("episode_date", { ascending: true })
         .order("start_time", { ascending: true });
 
       if (episodesData) {
         setEpisodes(episodesData);
+
+        // Fetch profile names for all unique created_by ids
+        const creatorIds = [...new Set(episodesData.map(ep => ep.created_by).filter(Boolean))] as string[];
+        if (creatorIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, name")
+            .in("user_id", creatorIds);
+
+          if (profiles) {
+            const map: Record<string, string> = {};
+            profiles.forEach(p => { map[p.user_id] = p.name; });
+            setProfileMap(map);
+          }
+        }
       }
 
       // Fetch latest conclusion request
@@ -271,6 +307,130 @@ export default function ImplantacaoDetalhe() {
     setEndTime(new Date().toTimeString().slice(0, 5));
   };
 
+  const handleOpenEditEpisode = (episode: Episode) => {
+    setEditingEpisode(episode);
+    setEpisodeType(episode.episode_type);
+    setEpisodeModule(episode.module);
+    setTrainedClients(episode.trained_clients || "");
+    setEpisodeDate(episode.episode_date);
+    setStartTime(episode.start_time);
+    setEndTime(episode.end_time);
+    setEpisodeObservations(episode.observations || "");
+    setUseTimerMode(false);
+    setEpisodeDialogOpen(true);
+  };
+
+  const handleSaveEpisode = async () => {
+    if (editingEpisode) {
+      await handleUpdateEpisode();
+    } else {
+      await handleAddEpisode();
+    }
+  };
+
+  const handleUpdateEpisode = async () => {
+    if (!editingEpisode || !episodeType || !episodeModule || !episodeDate || !startTime || !endTime) {
+      toast({ variant: "destructive", title: "Erro", description: "Preencha todos os campos obrigatórios." });
+      return;
+    }
+
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    const diffMs = end.getTime() - start.getTime();
+    const timeSpentMinutes = Math.round(diffMs / 60000);
+
+    if (timeSpentMinutes <= 0) {
+      toast({ variant: "destructive", title: "Erro", description: "A hora de término deve ser maior que a hora de início." });
+      return;
+    }
+
+    setSavingEpisode(true);
+
+    try {
+      const newValues = {
+        episode_type: episodeType,
+        module: episodeModule,
+        trained_clients: trainedClients || null,
+        episode_date: episodeDate,
+        start_time: startTime,
+        end_time: endTime,
+        time_spent_minutes: timeSpentMinutes,
+        observations: episodeObservations || null,
+      };
+
+      // Build audit logs by comparing old vs new
+      const fieldLabels: Record<string, string> = {
+        episode_type: "Tipo",
+        module: "Módulo",
+        trained_clients: "Clientes Treinados",
+        episode_date: "Data",
+        start_time: "Hora Início",
+        end_time: "Hora Fim",
+        time_spent_minutes: "Duração (min)",
+        observations: "Observações",
+      };
+
+      const auditEntries: { field_changed: string; old_value: string | null; new_value: string | null }[] = [];
+
+      for (const [key, label] of Object.entries(fieldLabels)) {
+        const oldVal = String(editingEpisode[key as keyof Episode] ?? "");
+        const newVal = String(newValues[key as keyof typeof newValues] ?? "");
+        if (oldVal !== newVal) {
+          auditEntries.push({
+            field_changed: label,
+            old_value: oldVal || null,
+            new_value: newVal || null,
+          });
+        }
+      }
+
+      // Update the episode
+      const { error } = await supabase
+        .from("episodes")
+        .update({
+          episode_type: episodeType as any,
+          module: episodeModule as any,
+          trained_clients: trainedClients || null,
+          episode_date: episodeDate,
+          start_time: startTime,
+          end_time: endTime,
+          time_spent_minutes: timeSpentMinutes,
+          observations: episodeObservations || null,
+        })
+        .eq("id", editingEpisode.id);
+
+      if (error) throw error;
+
+      // Insert audit logs
+      if (auditEntries.length > 0 && user?.id) {
+        await supabase.from("episode_audit_logs" as any).insert(
+          auditEntries.map(entry => ({
+            episode_id: editingEpisode.id,
+            edited_by: user.id,
+            ...entry,
+          }))
+        );
+      }
+
+      // Update local state
+      setEpisodes(prev => prev.map(ep =>
+        ep.id === editingEpisode.id
+          ? { ...ep, ...newValues, episode_type: episodeType, module: episodeModule }
+          : ep
+      ));
+
+      setEpisodeDialogOpen(false);
+      resetEpisodeForm();
+      await recalculateTotalTimeFromDB();
+
+      toast({ title: "Episódio atualizado!", description: `${auditEntries.length} campo(s) alterado(s).` });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Erro ao atualizar episódio", description: error.message });
+    } finally {
+      setSavingEpisode(false);
+    }
+  };
+
   const handleAddEpisode = async () => {
     if (!episodeType || !episodeModule || !episodeDate || !startTime || !endTime) {
       toast({
@@ -319,6 +479,12 @@ export default function ImplantacaoDetalhe() {
       if (error) throw error;
 
       setEpisodes((prev) => [...prev, data]);
+
+      // Add creator name to profile map
+      if (user?.id && user.email) {
+        setProfileMap(prev => ({ ...prev, [user.id!]: prev[user.id!] || user.email || "Você" }));
+      }
+
       setEpisodeDialogOpen(false);
       resetEpisodeForm();
       await recalculateTotalTimeFromDB();
@@ -380,7 +546,47 @@ export default function ImplantacaoDetalhe() {
     setEndTime("");
     setEpisodeObservations("");
     setUseTimerMode(false);
+    setEditingEpisode(null);
     timer.resetTimer();
+  };
+
+  const handleViewAuditHistory = async (episodeId: string) => {
+    setAuditEpisodeId(episodeId);
+    setAuditDialogOpen(true);
+    setLoadingAudit(true);
+
+    try {
+      const { data } = await supabase
+        .from("episode_audit_logs" as any)
+        .select("*")
+        .eq("episode_id", episodeId)
+        .order("edited_at", { ascending: false });
+
+      if (data && (data as any[]).length > 0) {
+        const logs = data as any[];
+        // Fetch editor names
+        const editorIds = [...new Set(logs.map((l: any) => l.edited_by))] as string[];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, name")
+          .in("user_id", editorIds);
+
+        const editorMap: Record<string, string> = {};
+        profiles?.forEach(p => { editorMap[p.user_id] = p.name; });
+
+        setAuditLogs(logs.map((l: any) => ({
+          ...l,
+          editor_name: editorMap[l.edited_by] || "Desconhecido",
+        })));
+      } else {
+        setAuditLogs([]);
+      }
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      setAuditLogs([]);
+    } finally {
+      setLoadingAudit(false);
+    }
   };
 
   const getImplementationTypeLabel = () => {
@@ -606,6 +812,17 @@ Relatorio gerado em: ${geradoEm}
     } finally {
       setSavingCommissions(false);
     }
+  };
+
+  const canEditEpisode = (episode: Episode) => {
+    if (role === "admin") return true;
+    if (episode.created_by === user?.id) return true;
+    return false;
+  };
+
+  const getFieldChangedLabel = (field: string) => {
+    // Already stored as label in Portuguese
+    return field;
   };
 
   if (loading) {
@@ -845,53 +1062,55 @@ Relatorio gerado em: ${geradoEm}
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Novo Episódio</DialogTitle>
+                    <DialogTitle>{editingEpisode ? "Editar Episódio" : "Novo Episódio"}</DialogTitle>
                     <DialogDescription>
-                      Registre um novo episódio de implantação
+                      {editingEpisode ? "Altere os dados do episódio" : "Registre um novo episódio de implantação"}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    {/* Timer Section */}
-                    <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Timer className="h-5 w-5 text-primary" />
-                          <span className="font-medium">Timer (Opcional)</span>
+                    {/* Timer Section - only for new episodes */}
+                    {!editingEpisode && (
+                      <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Timer className="h-5 w-5 text-primary" />
+                            <span className="font-medium">Timer (Opcional)</span>
+                          </div>
+                          {timer.isRunning ? (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleStopTimer}
+                            >
+                              <Square className="mr-2 h-4 w-4" />
+                              Parar
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleStartTimer}
+                              disabled={useTimerMode && !timer.isRunning}
+                            >
+                              <Play className="mr-2 h-4 w-4" />
+                              Iniciar
+                            </Button>
+                          )}
                         </div>
-                        {timer.isRunning ? (
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={handleStopTimer}
-                          >
-                            <Square className="mr-2 h-4 w-4" />
-                            Parar
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleStartTimer}
-                            disabled={useTimerMode && !timer.isRunning}
-                          >
-                            <Play className="mr-2 h-4 w-4" />
-                            Iniciar
-                          </Button>
+                        {(timer.isRunning || useTimerMode) && (
+                          <div className="mt-3 text-center">
+                            <p className="text-3xl font-mono font-bold text-primary">
+                              {timer.formattedTime}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {timer.isRunning ? "Cronômetro em execução..." : "Timer finalizado"}
+                            </p>
+                          </div>
                         )}
                       </div>
-                      {(timer.isRunning || useTimerMode) && (
-                        <div className="mt-3 text-center">
-                          <p className="text-3xl font-mono font-bold text-primary">
-                            {timer.formattedTime}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {timer.isRunning ? "Cronômetro em execução..." : "Timer finalizado"}
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                    )}
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
@@ -977,9 +1196,9 @@ Relatorio gerado em: ${geradoEm}
                     <Button variant="outline" onClick={() => setEpisodeDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button onClick={handleAddEpisode} disabled={savingEpisode}>
+                    <Button onClick={handleSaveEpisode} disabled={savingEpisode}>
                       {savingEpisode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Adicionar
+                      {editingEpisode ? "Salvar" : "Adicionar"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1012,6 +1231,12 @@ Relatorio gerado em: ${geradoEm}
                           {new Date(episode.episode_date).toLocaleDateString("pt-BR")} •{" "}
                           {episode.start_time} às {episode.end_time}
                         </p>
+                        {episode.created_by && profileMap[episode.created_by] && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            Criado por: {profileMap[episode.created_by]}
+                          </p>
+                        )}
                         {episode.trained_clients && (
                           <p className="text-sm">
                             <span className="text-muted-foreground">Treinados:</span>{" "}
@@ -1024,8 +1249,32 @@ Relatorio gerado em: ${geradoEm}
                           </p>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="flex flex-col items-end gap-2">
                         <p className="font-medium">{formatTime(episode.time_spent_minutes)}</p>
+                        <div className="flex items-center gap-1">
+                          {canEditEpisode(episode) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleOpenEditEpisode(episode)}
+                              title="Editar episódio"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {role === "admin" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleViewAuditHistory(episode.id)}
+                              title="Ver histórico de alterações"
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1034,6 +1283,49 @@ Relatorio gerado em: ${geradoEm}
             )}
           </CardContent>
         </Card>
+
+        {/* Audit History Dialog */}
+        <Dialog open={auditDialogOpen} onOpenChange={setAuditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Histórico de Alterações</DialogTitle>
+              <DialogDescription>
+                Registro de todas as edições realizadas neste episódio
+              </DialogDescription>
+            </DialogHeader>
+            {loadingAudit ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Nenhuma alteração registrada.
+              </div>
+            ) : (
+              <div className="max-h-[400px] overflow-y-auto space-y-3">
+                {auditLogs.map((log) => (
+                  <div key={log.id} className="rounded-lg border border-border p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{log.field_changed}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.edited_at).toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-destructive line-through">{log.old_value || "(vazio)"}</span>
+                      {" → "}
+                      <span className="text-primary font-medium">{log.new_value || "(vazio)"}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      {log.editor_name}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Commission Selection Modal */}
         <CommissionSelectionModal
