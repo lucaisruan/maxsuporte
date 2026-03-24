@@ -816,7 +816,7 @@ Relatorio gerado em: ${geradoEm}
 
   const canEditEpisode = (episode: Episode) => {
     if (role === "admin") return true;
-    if (episode.created_by === user?.id) return true;
+    if (user?.id && episode.created_by === user.id) return true;
     return false;
   };
 
@@ -1219,24 +1219,24 @@ Relatorio gerado em: ${geradoEm}
                   >
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant="outline">
                             {getEpisodeTypeLabel(episode.episode_type)}
                           </Badge>
                           <Badge variant="secondary">
                             {getModuleLabel(episode.module)}
                           </Badge>
+                          {episode.created_by && profileMap[episode.created_by] && (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              {profileMap[episode.created_by]}
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {new Date(episode.episode_date).toLocaleDateString("pt-BR")} •{" "}
                           {episode.start_time} às {episode.end_time}
                         </p>
-                        {episode.created_by && profileMap[episode.created_by] && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            Criado por: {profileMap[episode.created_by]}
-                          </p>
-                        )}
                         {episode.trained_clients && (
                           <p className="text-sm">
                             <span className="text-muted-foreground">Treinados:</span>{" "}
@@ -1254,13 +1254,13 @@ Relatorio gerado em: ${geradoEm}
                         <div className="flex items-center gap-1">
                           {canEditEpisode(episode) && (
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
                               onClick={() => handleOpenEditEpisode(episode)}
-                              title="Editar episódio"
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <Pencil className="h-3 w-3" />
+                              Editar
                             </Button>
                           )}
                           {role === "admin" && (
