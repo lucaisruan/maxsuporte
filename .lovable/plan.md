@@ -1,48 +1,111 @@
 
 
-# Correcao: Permitir Data Retroativa no Cadastro de Implantacao
+# Plano: Edição de Episódios + Auditoria + Visibilidade Multi-Analistas
 
-## Problema
+## Resumo
 
-O campo "Data de Inicio" no formulario de nova implantacao possui o atributo `min` configurado para a data atual, impedindo a selecao de datas passadas.
+Três entregas principais:
+1. Permitir edição de episódios (analista autor ou admin)
+2. Criar tabela de auditoria com histórico de alterações
+3. Exibir nome do analista criador em cada episódio + garantir visibilidade
 
-**Linha 293 do arquivo `src/pages/admin/NovaImplantacao.tsx`:**
-```text
-min={new Date().toISOString().split("T")[0]}
+---
+
+## Análise da Situação Atual
+
+- **RLS de episodes (SELECT)**: Já permite que todos os analistas vinculados vejam todos os episódios da implantação. A query no frontend também busca por `implementation_id` sem filtro de `created_by`. **A visibilidade já funciona no nível de dados.**
+- **RLS de episodes (UPDATE)**: Permite update se `created_by = auth.uid()` OU admin. Isso está correto para a regra solicitada.
+- **Interface**: Não exibe quem criou o episódio. Não permite edição. O `Episode` interface não inclui `created_by`.
+
+---
+
+## Etapas de Implementação
+
+### 1. Criar tabela `episode_audit_logs` (migração SQL)
+
+```sql
+CREATE TABLE public.episode_audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  episode_id uuid NOT NULL REFERENCES public.episodes(id) ON DELETE CASCADE,
+  edited_by uuid NOT NULL,
+  field_changed text NOT NULL,
+  old_value text,
+  new_value text,
+  edited_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.episode_audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Admins podem ver todos os logs
+CREATE POLICY "Admins can view audit logs"
+  ON public.episode_audit_logs FOR SELECT
+  TO authenticated
+  USING (has_role(auth.uid(), 'admin'::app_role));
+
+-- Inserção permitida para autenticados (o sistema insere via código)
+CREATE POLICY "Authenticated can insert audit logs"
+  ON public.episode_audit_logs FOR INSERT
+  TO authenticated
+  WITH CHECK (edited_by = auth.uid());
 ```
 
-Esse atributo HTML bloqueia qualquer data anterior a hoje.
+### 2. Atualizar interface `Episode` no frontend
 
-## Solucao
+Adicionar `created_by` ao tipo e à query de busca de episódios. Também buscar o perfil do criador via join:
 
-Remover o atributo `min` do campo de data, permitindo que o administrador informe datas retroativas livremente.
-
-Adicionalmente, ajustar a logica de determinacao de status (linhas 143-145) para tratar corretamente datas passadas:
-
-- Data passada ou hoje: status = `em_andamento`
-- Data futura: status = `agendada`
-
-A logica atual ja funciona corretamente para isso (`startDate > today` retorna false para datas passadas), entao nenhuma mudanca adicional e necessaria na logica de status.
-
-## Alteracao
-
-**Arquivo:** `src/pages/admin/NovaImplantacao.tsx`
-
-- **Remover** o atributo `min` da linha 293
-- **Atualizar** o texto auxiliar (linha 296-298) para indicar que datas passadas e futuras sao permitidas
-
-## Detalhes Tecnicos
-
-Mudanca unica no componente `Input` de data:
-
-```text
-Antes:
-  <Input type="date" ... min={new Date().toISOString().split("T")[0]} />
-  <p>Datas futuras criam implantacoes agendadas</p>
-
-Depois:
-  <Input type="date" ... />
-  <p>Datas futuras criam implantacoes agendadas. Datas passadas iniciam como "Em andamento".</p>
+```typescript
+interface Episode {
+  // ... campos existentes
+  created_by: string | null;
+  creator_profile?: { name: string } | null;
+}
 ```
 
-Nenhuma outra alteracao e necessaria. O restante da logica (status, `actual_start_date`) ja trata corretamente ambos os cenarios.
+Query atualizada:
+```typescript
+.select("*, creator_profile:profiles!episodes_created_by_fkey(name)")
+```
+
+Como não há FK explícita, faremos um segundo fetch dos profiles ou usaremos um map local com os profiles já carregados.
+
+### 3. Adicionar funcionalidade de edição de episódio
+
+- Novo estado `editingEpisode` para controlar qual episódio está sendo editado
+- Reutilizar o dialog de episódio existente, preenchendo os campos com os valores atuais
+- Botão "Editar" visível apenas se `episode.created_by === user.id` OU `role === 'admin'`
+- Ao salvar: comparar valores antigos vs novos, inserir logs de auditoria na tabela `episode_audit_logs`, depois fazer update no episódio
+
+### 4. Exibir nome do criador nos episódios
+
+Na listagem de episódios, adicionar badge/texto com o nome do analista que criou cada episódio. Buscar profiles vinculados ao `created_by` dos episódios.
+
+### 5. Botão "Ver histórico de alterações" (apenas admin)
+
+- Dialog que busca `episode_audit_logs` para o episódio selecionado
+- Exibe: usuário que editou, data/hora, campo alterado, valor antigo → valor novo
+- Buscar nome do editor via profiles
+
+### 6. Verificar visibilidade (confirmação)
+
+A RLS e queries já estão corretas para multi-analistas. A única melhoria é garantir que o `created_by` é exibido na UI para distinguir quem criou cada episódio.
+
+---
+
+## Arquivos Impactados
+
+| Arquivo | Alteração |
+|---|---|
+| Migração SQL (nova) | Criar tabela `episode_audit_logs` |
+| `src/pages/ImplantacaoDetalhe.tsx` | Adicionar edição, auditoria, nome do criador, histórico |
+| `src/integrations/supabase/types.ts` | Auto-atualizado após migração |
+
+---
+
+## O Que NÃO Será Alterado
+
+- Webhooks existentes
+- Cálculo de horas/comissão
+- Checklist
+- Dashboard
+- Relatórios de produtividade
+
