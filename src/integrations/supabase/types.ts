@@ -516,6 +516,44 @@ export type Database = {
           },
         ]
       }
+      episode_audit_logs: {
+        Row: {
+          edited_at: string
+          edited_by: string
+          episode_id: string
+          field_changed: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          edited_at?: string
+          edited_by: string
+          episode_id: string
+          field_changed: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          edited_at?: string
+          edited_by?: string
+          episode_id?: string
+          field_changed?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episode_audit_logs_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       episodes: {
         Row: {
           created_at: string
