@@ -601,7 +601,7 @@ export default function ImplantacaoDetalhe() {
     const implType = getImplementationTypeLabel();
 
     const formatDateBR = (dateStr: string) => {
-      const d = new Date(dateStr);
+      const d = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00" : ""));
       return d.toLocaleDateString("pt-BR");
     };
 
