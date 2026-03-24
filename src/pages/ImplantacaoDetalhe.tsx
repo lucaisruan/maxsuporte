@@ -1234,7 +1234,7 @@ Relatorio gerado em: ${geradoEm}
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(episode.episode_date).toLocaleDateString("pt-BR")} •{" "}
+                          {new Date(episode.episode_date + "T00:00:00").toLocaleDateString("pt-BR")} •{" "}
                           {episode.start_time} às {episode.end_time}
                         </p>
                         {episode.trained_clients && (
