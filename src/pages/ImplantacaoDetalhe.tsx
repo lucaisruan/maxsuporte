@@ -601,7 +601,7 @@ export default function ImplantacaoDetalhe() {
     const implType = getImplementationTypeLabel();
 
     const formatDateBR = (dateStr: string) => {
-      const d = new Date(dateStr);
+      const d = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00" : ""));
       return d.toLocaleDateString("pt-BR");
     };
 
@@ -1234,7 +1234,7 @@ Relatorio gerado em: ${geradoEm}
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(episode.episode_date).toLocaleDateString("pt-BR")} •{" "}
+                          {new Date(episode.episode_date + "T00:00:00").toLocaleDateString("pt-BR")} •{" "}
                           {episode.start_time} às {episode.end_time}
                         </p>
                         {episode.trained_clients && (
