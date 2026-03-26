@@ -37,6 +37,31 @@ export default function OncenterTest() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const testAuth = async () => {
+    setLoading(true);
+    setError(null);
+    setData(null);
+    setRawJson("");
+    try {
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        "oncenter-test-auth"
+      );
+      if (fnError) {
+        setError(`Erro: ${fnError.message}`);
+        setRawJson(JSON.stringify({ message: fnError.message, context: (fnError as any).context, data: result }, null, 2));
+        return;
+      }
+      setRawJson(JSON.stringify(result, null, 2));
+      if (result?.oncenter_status !== 200) {
+        setError(`Oncenter retornou HTTP ${result?.oncenter_status}`);
+      }
+    } catch (err: any) {
+      setError(err.message || "Erro desconhecido");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchDepartments = async () => {
     setLoading(true);
     setError(null);
@@ -100,14 +125,24 @@ export default function OncenterTest() {
               Teste da edge function oncenter-departments
             </p>
           </div>
-          <Button onClick={fetchDepartments} disabled={loading}>
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            {loading ? "Carregando..." : "Buscar Departamentos"}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={fetchDepartments} disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {loading ? "Carregando..." : "Buscar Departamentos"}
+            </Button>
+            <Button variant="outline" onClick={testAuth} disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Testar Auth (finish-motives)
+            </Button>
+          </div>
         </div>
 
         {error && (
