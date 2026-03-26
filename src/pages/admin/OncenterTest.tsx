@@ -37,6 +37,31 @@ export default function OncenterTest() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const testAuth = async () => {
+    setLoading(true);
+    setError(null);
+    setData(null);
+    setRawJson("");
+    try {
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        "oncenter-test-auth"
+      );
+      if (fnError) {
+        setError(`Erro: ${fnError.message}`);
+        setRawJson(JSON.stringify({ message: fnError.message, context: (fnError as any).context, data: result }, null, 2));
+        return;
+      }
+      setRawJson(JSON.stringify(result, null, 2));
+      if (result?.oncenter_status !== 200) {
+        setError(`Oncenter retornou HTTP ${result?.oncenter_status}`);
+      }
+    } catch (err: any) {
+      setError(err.message || "Erro desconhecido");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchDepartments = async () => {
     setLoading(true);
     setError(null);
