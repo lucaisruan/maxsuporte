@@ -279,6 +279,30 @@ export type Database = {
           },
         ]
       }
+      demand_oncenter_links: {
+        Row: {
+          created_at: string
+          demand_id: string
+          id: string
+          linked_by: string | null
+          oncenter_ticket_id: number
+        }
+        Insert: {
+          created_at?: string
+          demand_id: string
+          id?: string
+          linked_by?: string | null
+          oncenter_ticket_id: number
+        }
+        Update: {
+          created_at?: string
+          demand_id?: string
+          id?: string
+          linked_by?: string | null
+          oncenter_ticket_id?: number
+        }
+        Relationships: []
+      }
       demand_step_evidences: {
         Row: {
           created_at: string
@@ -930,6 +954,189 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      oncenter_client_links: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          oncenter_contact_id: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          oncenter_contact_id: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          oncenter_contact_id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      oncenter_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          last_synced_at: string | null
+          name: string
+          oncenter_contact_id: number
+          phone: string | null
+          photo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_synced_at?: string | null
+          name: string
+          oncenter_contact_id: number
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_synced_at?: string | null
+          name?: string
+          oncenter_contact_id?: number
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      oncenter_ticket_cache: {
+        Row: {
+          attended_at_oncenter: string | null
+          created_at: string
+          created_at_oncenter: string | null
+          department_name: string | null
+          finish_motive: string | null
+          finished_at_oncenter: string | null
+          id: string
+          last_message: string | null
+          oncenter_contact_id: number | null
+          oncenter_department_id: number | null
+          oncenter_ticket_id: number
+          oncenter_user_id: number | null
+          protocol: string | null
+          status: string
+          synced_at: string
+          updated_at_oncenter: string | null
+        }
+        Insert: {
+          attended_at_oncenter?: string | null
+          created_at?: string
+          created_at_oncenter?: string | null
+          department_name?: string | null
+          finish_motive?: string | null
+          finished_at_oncenter?: string | null
+          id?: string
+          last_message?: string | null
+          oncenter_contact_id?: number | null
+          oncenter_department_id?: number | null
+          oncenter_ticket_id: number
+          oncenter_user_id?: number | null
+          protocol?: string | null
+          status: string
+          synced_at?: string
+          updated_at_oncenter?: string | null
+        }
+        Update: {
+          attended_at_oncenter?: string | null
+          created_at?: string
+          created_at_oncenter?: string | null
+          department_name?: string | null
+          finish_motive?: string | null
+          finished_at_oncenter?: string | null
+          id?: string
+          last_message?: string | null
+          oncenter_contact_id?: number | null
+          oncenter_department_id?: number | null
+          oncenter_ticket_id?: number
+          oncenter_user_id?: number | null
+          protocol?: string | null
+          status?: string
+          synced_at?: string
+          updated_at_oncenter?: string | null
+        }
+        Relationships: []
+      }
+      oncenter_user_links: {
+        Row: {
+          chat_status: string | null
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          oncenter_email: string | null
+          oncenter_photo_url: string | null
+          oncenter_role: string | null
+          oncenter_user_id: number
+          oncenter_user_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_status?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          oncenter_email?: string | null
+          oncenter_photo_url?: string | null
+          oncenter_role?: string | null
+          oncenter_user_id: number
+          oncenter_user_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_status?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          oncenter_email?: string | null
+          oncenter_photo_url?: string | null
+          oncenter_role?: string | null
+          oncenter_user_id?: number
+          oncenter_user_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      oncenter_user_status_history: {
+        Row: {
+          id: string
+          oncenter_user_id: number
+          recorded_at: string
+          status: string
+        }
+        Insert: {
+          id?: string
+          oncenter_user_id: number
+          recorded_at?: string
+          status: string
+        }
+        Update: {
+          id?: string
+          oncenter_user_id?: number
+          recorded_at?: string
+          status?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
