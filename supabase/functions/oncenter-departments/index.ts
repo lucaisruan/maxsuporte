@@ -77,18 +77,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse and return the data
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      data = responseText;
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Repassa a resposta da Oncenter diretamente
+    return new Response(responseText, {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("oncenter-departments error:", error);
     const msg = error instanceof Error ? error.message : "Unknown error";
