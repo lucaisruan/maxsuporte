@@ -49,13 +49,20 @@ export default function OncenterTest() {
       );
 
       if (fnError) {
+        // Show detailed error info
+        const errorDetail = {
+          message: fnError.message,
+          context: (fnError as any).context ?? null,
+          status: (fnError as any).status ?? null,
+          data: result ?? null,
+        };
         setError(`Erro na invocação: ${fnError.message}`);
+        setRawJson(JSON.stringify(errorDetail, null, 2));
         return;
       }
 
       setRawJson(JSON.stringify(result, null, 2));
 
-      // The edge function passes through the Oncenter response directly.
       // Try to extract departments array from common response shapes.
       let departments: OncenterDepartment[] = [];
       if (Array.isArray(result)) {
@@ -66,9 +73,16 @@ export default function OncenterTest() {
         departments = result.departments;
       }
 
+      // Check if result is an error object from the edge function
+      if (result?.error) {
+        setError(`Oncenter API Error: ${result.error} (HTTP ${result.status ?? "?"})`);
+        return;
+      }
+
       setData(departments);
     } catch (err: any) {
       setError(err.message || "Erro desconhecido");
+      setRawJson(JSON.stringify({ caught: err.message, stack: err.stack }, null, 2));
     } finally {
       setLoading(false);
     }
