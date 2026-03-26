@@ -100,14 +100,24 @@ export default function OncenterTest() {
               Teste da edge function oncenter-departments
             </p>
           </div>
-          <Button onClick={fetchDepartments} disabled={loading}>
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            {loading ? "Carregando..." : "Buscar Departamentos"}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={fetchDepartments} disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {loading ? "Carregando..." : "Buscar Departamentos"}
+            </Button>
+            <Button variant="outline" onClick={testAuth} disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Testar Auth (finish-motives)
+            </Button>
+          </div>
         </div>
 
         {error && (
