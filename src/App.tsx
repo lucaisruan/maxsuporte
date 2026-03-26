@@ -31,6 +31,7 @@ import DemandasList from "./pages/demandas/DemandasList";
 import NovaDemanda from "./pages/demandas/NovaDemanda";
 import DemandaDetalhe from "./pages/demandas/DemandaDetalhe";
 import RelatorioDemandas from "./pages/admin/RelatorioDemandas";
+import OncenterTest from "./pages/admin/OncenterTest";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 
@@ -82,6 +83,7 @@ function AppRoutes() {
       <Route path="/admin/demandas/modelos/novo" element={<ProtectedRoute allowedRoles={["admin"]}><DemandTemplateForm /></ProtectedRoute>} />
       <Route path="/admin/demandas/modelos/:id" element={<ProtectedRoute allowedRoles={["admin"]}><DemandTemplateForm /></ProtectedRoute>} />
       <Route path="/admin/relatorio-demandas" element={<ProtectedRoute allowedRoles={["admin"]}><RelatorioDemandas /></ProtectedRoute>} />
+      <Route path="/admin/oncenter-test" element={<ProtectedRoute allowedRoles={["admin"]}><OncenterTest /></ProtectedRoute>} />
 
       {/* Implantador/Analista routes */}
       <Route path="/implantador" element={<ProtectedRoute allowedRoles={["implantador"]}><ImplantadorDashboard /></ProtectedRoute>} />
