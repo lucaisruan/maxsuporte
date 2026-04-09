@@ -54,6 +54,7 @@ export default function ImplantadorDashboard() {
           client:clients(name),
           checklist_items(is_completed,title)
         `)
+        .in("status", ["em_andamento", "agendada"])
         .order("created_at", { ascending: false });
 
       if (assignedIds.length > 0) {
