@@ -34,7 +34,7 @@ interface Implementation {
 export default function ImplantacoesAdmin() {
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<"todas" | "em_andamento" | "concluidas">("todas");
+  const [statusFilter, setStatusFilter] = useState<"todas" | "em_andamento" | "concluidas">("em_andamento");
 
   const filteredImplementations = statusFilter === "concluidas"
     ? implementations.filter((impl) => impl.status === "concluida")
