@@ -34,10 +34,12 @@ interface Implementation {
 export default function ImplantacoesAdmin() {
   const [implementations, setImplementations] = useState<Implementation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<"todas" | "concluidas">("todas");
+  const [statusFilter, setStatusFilter] = useState<"todas" | "em_andamento" | "concluidas">("em_andamento");
 
   const filteredImplementations = statusFilter === "concluidas"
     ? implementations.filter((impl) => impl.status === "concluida")
+    : statusFilter === "em_andamento"
+    ? implementations.filter((impl) => impl.status === "em_andamento")
     : implementations;
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -204,28 +206,24 @@ export default function ImplantacoesAdmin() {
             <div className="flex items-center justify-between">
               <CardTitle>Lista de Implantações</CardTitle>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setStatusFilter("todas")}
-                  className={cn(
-                    "rounded-full px-4 py-1.5 text-sm font-medium border transition-colors duration-150",
-                    statusFilter === "todas"
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border hover:bg-accent"
-                  )}
-                >
-                  Todas
-                </button>
-                <button
-                  onClick={() => setStatusFilter("concluidas")}
-                  className={cn(
-                    "rounded-full px-4 py-1.5 text-sm font-medium border transition-colors duration-150",
-                    statusFilter === "concluidas"
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border hover:bg-accent"
-                  )}
-                >
-                  Concluídas
-                </button>
+                {([
+                  { key: "em_andamento" as const, label: "Em Andamento" },
+                  { key: "todas" as const, label: "Todas" },
+                  { key: "concluidas" as const, label: "Concluídas" },
+                ]).map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setStatusFilter(f.key)}
+                    className={cn(
+                      "rounded-full px-4 py-1.5 text-sm font-medium border transition-colors duration-150",
+                      statusFilter === f.key
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:bg-accent"
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
             </div>
           </CardHeader>
@@ -234,6 +232,8 @@ export default function ImplantacoesAdmin() {
               <div className="py-8 text-center text-muted-foreground">
                 {statusFilter === "concluidas"
                   ? "Nenhuma implantação concluída encontrada."
+                  : statusFilter === "em_andamento"
+                  ? "Nenhuma implantação em andamento encontrada."
                   : "Nenhuma implantação encontrada."}
               </div>
             ) : (
